@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from types import MappingProxyType
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -146,6 +147,17 @@ class TestAlarmControlPanel:
         coordinator.spaces = {"s1": self._make_space()}
         panel = AjaxAlarmControlPanel(coordinator=coordinator, space_id="s1")
         assert panel._attr_name is None
+
+    def test_account_label_from_config_entry_mapping(self) -> None:
+        coordinator = MagicMock()
+        coordinator.spaces = {"s1": self._make_space()}
+        coordinator.config_entry = MagicMock(
+            entry_id="account-entry",
+            data=MappingProxyType({"account_label": "Main Home"}),
+        )
+        panel = AjaxAlarmControlPanel(coordinator=coordinator, space_id="s1")
+        assert panel._account_label == "main_home"
+        assert panel._attr_name == "main_home Home"
 
     def test_device_info_with_space(self) -> None:
         coordinator = MagicMock()
