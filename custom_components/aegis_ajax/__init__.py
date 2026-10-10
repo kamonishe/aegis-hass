@@ -191,8 +191,7 @@ async def _resolve_target_space_ids(
         entry_id = getattr(entry, "entry_id", "")
         for space_id in coordinator._space_ids:
             if uid == f"aegis_ajax_alarm_{space_id}" or (
-                isinstance(entry_id, str)
-                and uid == f"aegis_ajax_alarm_{entry_id}_{space_id}"
+                isinstance(entry_id, str) and uid == f"aegis_ajax_alarm_{entry_id}_{space_id}"
             ):
                 results.append((coordinator, space_id))
                 break
