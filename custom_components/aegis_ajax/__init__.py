@@ -139,11 +139,16 @@ async def _resolve_target_space_ids(
     if isinstance(entity_ids, str):
         entity_ids = [entity_ids]
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    configured_entries = hass.config_entries.async_entries(DOMAIN)
+    entries = {
+        entry.entry_id: entry
+        for entry in configured_entries
+        if isinstance(getattr(entry, "entry_id", None), str)
+    }
     if not entity_ids:
         # No target: operate on all spaces (backwards-compatible)
         results: list[tuple[AjaxCobrandedCoordinator, str]] = []
-        for entry in entries:
+        for entry in configured_entries:
             coordinator: AjaxCobrandedCoordinator = entry.runtime_data
             for space_id in coordinator._space_ids:
                 results.append((coordinator, space_id))
@@ -163,7 +168,8 @@ async def _resolve_target_space_ids(
                     context=call.context, entity_id=entity_id, permission=POLICY_CONTROL
                 )
 
-    # Map entity_id → space_id via unique_id pattern "aegis_ajax_alarm_{space_id}"
+    # Resolve the space through the owning config entry. Multiple Ajax accounts
+    # can expose the same Space ID, so the Space ID alone is not an account key.
     entity_reg = er.async_get(hass)
     results = []
     for eid in entity_ids:
@@ -171,13 +177,23 @@ async def _resolve_target_space_ids(
         if entity_entry is None or entity_entry.platform != DOMAIN:
             continue
         uid = entity_entry.unique_id or ""
-        # unique_id format: "aegis_ajax_alarm_{space_id}"
-        if not uid.startswith("aegis_ajax_alarm_"):
+        config_entry_id = getattr(entity_entry, "config_entry_id", None)
+        if isinstance(config_entry_id, str) and config_entry_id in entries:
+            entry = entries[config_entry_id]
+        elif len(configured_entries) == 1:
+            # Lightweight test registries and legacy callers may omit the
+            # config-entry ownership fields. Real HA entities always include
+            # them; only fall back when there is no routing ambiguity.
+            entry = configured_entries[0]
+        else:
             continue
-        space_id = uid.removeprefix("aegis_ajax_alarm_")
-        for entry in entries:
-            coordinator = entry.runtime_data
-            if space_id in coordinator._space_ids:
+        coordinator = entry.runtime_data
+        entry_id = getattr(entry, "entry_id", "")
+        for space_id in coordinator._space_ids:
+            if uid == f"aegis_ajax_alarm_{space_id}" or (
+                isinstance(entry_id, str)
+                and uid == f"aegis_ajax_alarm_{entry_id}_{space_id}"
+            ):
                 results.append((coordinator, space_id))
                 break
     return results
@@ -535,6 +551,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AjaxCobrandedConfigEntry
             entry.options.get(CONF_DELAY_PANEL_STATES, DEFAULT_DELAY_PANEL_STATES)
         ),
     )
+    coordinator.config_entry = entry
     try:
         await coordinator.async_config_entry_first_refresh()
     except BaseException:

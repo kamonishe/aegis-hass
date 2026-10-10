@@ -14,6 +14,7 @@ from homeassistant.components.alarm_control_panel import (  # type: ignore[attr-
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import slugify
 
 from custom_components.aegis_ajax.const import (
     CONF_EXPOSE_ARM_HOME,
@@ -223,7 +224,26 @@ def map_security_state(state: SecurityState) -> AlarmControlPanelState:
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
+    from homeassistant.helpers import entity_registry as er  # noqa: PLC0415
+
     coordinator: AjaxCobrandedCoordinator = entry.runtime_data
+    registry = er.async_get(hass)
+    for entity in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if entity.domain != "alarm_control_panel" or entity.platform != DOMAIN:
+            continue
+        legacy_ids = {
+            f"aegis_ajax_alarm_{sid}": f"aegis_ajax_alarm_{entry.entry_id}_{sid}"
+            for sid in coordinator.spaces
+        }
+        for sid, space in coordinator.spaces.items():
+            for group in space.groups:
+                legacy_ids[f"aegis_ajax_alarm_{sid}_group_{group.id}"] = (
+                    f"aegis_ajax_alarm_{entry.entry_id}_{sid}_group_{group.id}"
+                )
+        if entity.unique_id in legacy_ids:
+            registry.async_update_entity(
+                entity.entity_id, new_unique_id=legacy_ids[entity.unique_id]
+            )
     entities: list[AlarmControlPanelEntity] = []
     for space_id, space in coordinator.spaces.items():
         # Always create the space-level panel. It carries night-mode support
@@ -261,7 +281,28 @@ class _AjaxAlarmPanelBase(CoordinatorEntity[AjaxCobrandedCoordinator], AlarmCont
     def __init__(self, coordinator: AjaxCobrandedCoordinator, space_id: str) -> None:
         super().__init__(coordinator)
         self._space_id = space_id
+        coordinator_entry = getattr(coordinator, "config_entry", None)
+        entry_id = getattr(coordinator, "entry_id", "")
+        self._account_entry_id = entry_id if isinstance(entry_id, str) else ""
+        if not self._account_entry_id and coordinator_entry is not None:
+            candidate_id = getattr(coordinator_entry, "entry_id", "")
+            if isinstance(candidate_id, str):
+                self._account_entry_id = candidate_id
+        entry = coordinator_entry
+        if entry is None and self._account_entry_id:
+            entry = coordinator.hass.config_entries.async_get_entry(self._account_entry_id)
+        entry_data = getattr(entry, "data", {})
+        if not isinstance(entry_data, dict):
+            entry_data = {}
+        raw_label = entry_data.get("account_label")
+        self._account_label = slugify(raw_label) if isinstance(raw_label, str) else ""
         space = coordinator.spaces.get(space_id)
+        space_name = space.name if space and isinstance(space.name, str) else space_id
+        self._attr_name = f"{self._account_label} {space_name}" if self._account_label else None
+        if self._account_label:
+            self._attr_suggested_object_id = (
+                f"ajax_{self._account_label}_{slugify(str(space_name))}"
+            )
         hub_id = space.hub_id if space else space_id
         hub_device = coordinator.devices.get(hub_id)
         if hub_device:
@@ -279,7 +320,9 @@ class _AjaxAlarmPanelBase(CoordinatorEntity[AjaxCobrandedCoordinator], AlarmCont
         return self.coordinator.spaces.get(self._space_id)
 
     def _get_options(self) -> dict[str, Any]:
-        entry = self.coordinator.config_entry
+        entry = getattr(self.coordinator, "config_entry", None)
+        if entry is None and self._account_entry_id:
+            entry = self.coordinator.hass.config_entries.async_get_entry(self._account_entry_id)
         if entry is None:
             return {}
         return dict(entry.options)
@@ -383,7 +426,10 @@ class AjaxAlarmControlPanel(_AjaxAlarmPanelBase):
 
     def __init__(self, coordinator: AjaxCobrandedCoordinator, space_id: str) -> None:
         super().__init__(coordinator, space_id)
-        self._attr_unique_id = f"aegis_ajax_alarm_{space_id}"
+        if self._account_entry_id:
+            self._attr_unique_id = f"aegis_ajax_alarm_{self._account_entry_id}_{space_id}"
+        else:
+            self._attr_unique_id = f"aegis_ajax_alarm_{space_id}"
 
     @property
     def available(self) -> bool:
@@ -532,6 +578,20 @@ class AjaxAlarmControlPanel(_AjaxAlarmPanelBase):
         self.coordinator._optimistic_space_states[self._space_id] = (expiry, new_state)
         if self.hass is not None:
             self.async_write_ha_state()
+            for entry in self.hass.config_entries.async_entries(DOMAIN):
+                other = getattr(entry, "runtime_data", None)
+                if other is None or other is self.coordinator:
+                    continue
+                other_space = other.spaces.get(self._space_id)
+                if other_space is None:
+                    continue
+                other.spaces[self._space_id] = replace(
+                    other_space,
+                    security_state=new_state,
+                    night_mode_enabled=night_mode_enabled,
+                )
+                other._optimistic_space_states[self._space_id] = (expiry, new_state)
+                other.async_set_updated_data({"spaces": other.spaces, "devices": other.devices})
 
 
 class AjaxGroupAlarmControlPanel(_AjaxAlarmPanelBase):
@@ -554,10 +614,22 @@ class AjaxGroupAlarmControlPanel(_AjaxAlarmPanelBase):
     def __init__(self, coordinator: AjaxCobrandedCoordinator, space_id: str, group_id: str) -> None:
         super().__init__(coordinator, space_id)
         self._group_id = group_id
-        self._attr_unique_id = f"aegis_ajax_alarm_{space_id}_group_{group_id}"
+        if self._account_entry_id:
+            self._attr_unique_id = (
+                f"aegis_ajax_alarm_{self._account_entry_id}_{space_id}_group_{group_id}"
+            )
+        else:
+            self._attr_unique_id = f"aegis_ajax_alarm_{space_id}_group_{group_id}"
         space = coordinator.spaces.get(space_id)
         group = space.get_group(group_id) if space else None
-        self._attr_name = group.name if group else f"Group {group_id}"
+        group_name = group.name if group else f"Group {group_id}"
+        self._attr_name = (
+            f"{self._account_label} {group_name}" if self._account_label else group_name
+        )
+        if self._account_label:
+            self._attr_suggested_object_id = (
+                f"ajax_{self._account_label}_{slugify(str(group_name))}"
+            )
 
     @property
     def _group(self) -> Group | None:
@@ -650,3 +722,19 @@ class AjaxGroupAlarmControlPanel(_AjaxAlarmPanelBase):
             return  # not a real dataclass (e.g. during tests)
         if self.hass is not None:
             self.async_write_ha_state()
+            for entry in self.hass.config_entries.async_entries(DOMAIN):
+                other = getattr(entry, "runtime_data", None)
+                if other is None or other is self.coordinator:
+                    continue
+                other_space = other.spaces.get(self._space_id)
+                if other_space is None:
+                    continue
+                other_group = other_space.get_group(self._group_id)
+                if other_group is None:
+                    continue
+                other_groups = tuple(
+                    replace(g, security_state=new_state) if g.id == self._group_id else g
+                    for g in other_space.groups
+                )
+                other.spaces[self._space_id] = replace(other_space, groups=other_groups)
+                other.async_set_updated_data({"spaces": other.spaces, "devices": other.devices})

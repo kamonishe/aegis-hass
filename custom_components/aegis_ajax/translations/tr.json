@@ -21,6 +21,7 @@
                 "title": "Alan Seçimi",
                 "description": "Eklemek istediğiniz alanları (hub'ları) seçin.",
                 "data": {
+                    "account_label": "Hesap etiketi",
                     "spaces": "Alanlar"
                 }
             },

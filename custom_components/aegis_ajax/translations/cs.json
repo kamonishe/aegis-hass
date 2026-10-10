@@ -21,6 +21,7 @@
                 "title": "Vyberte prostory",
                 "description": "Zvolte, které prostory (huby) chcete přidat.",
                 "data": {
+                    "account_label": "Štítek účtu",
                     "spaces": "Prostory"
                 }
             },

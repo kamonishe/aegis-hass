@@ -21,6 +21,7 @@
                 "title": "Selectați spațiile",
                 "description": "Alegeți ce spații (hub-uri) să adăugați.",
                 "data": {
+                    "account_label": "Etichetă cont",
                     "spaces": "Spații"
                 }
             },

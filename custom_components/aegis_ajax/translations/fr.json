@@ -21,6 +21,7 @@
                 "title": "Sélectionner les espaces",
                 "description": "Choisissez les espaces (hubs) à ajouter.",
                 "data": {
+                    "account_label": "Libellé du compte",
                     "spaces": "Espaces"
                 }
             },
