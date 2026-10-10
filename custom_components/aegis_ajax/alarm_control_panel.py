@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.alarm_control_panel import (  # type: ignore[attr-defined]
@@ -292,7 +293,7 @@ class _AjaxAlarmPanelBase(CoordinatorEntity[AjaxCobrandedCoordinator], AlarmCont
         if entry is None and self._account_entry_id:
             entry = coordinator.hass.config_entries.async_get_entry(self._account_entry_id)
         entry_data = getattr(entry, "data", {})
-        if not isinstance(entry_data, dict):
+        if not isinstance(entry_data, Mapping):
             entry_data = {}
         raw_label = entry_data.get("account_label")
         self._account_label = slugify(raw_label) if isinstance(raw_label, str) else ""
