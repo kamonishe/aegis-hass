@@ -260,6 +260,8 @@ class AjaxCobrandedConfigFlow(ConfigFlow, domain=DOMAIN):
                 "password_hash": self._password_hash,
                 "app_label": self._app_label,
                 "spaces": user_input["spaces"],
+                "account_label": str(user_input.get("account_label", "Ajax account")).strip()
+                or "Ajax account",
                 "device_id": self._client.session.device_id,
             }
             # Persist session token to avoid re-login (and 2FA) on restart
@@ -277,6 +279,9 @@ class AjaxCobrandedConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="select_spaces",
             data_schema=vol.Schema(
                 {
+                    vol.Required("account_label", default="Ajax account"): vol.All(
+                        str, vol.Length(min=1, max=32)
+                    ),
                     # `default=[]` is intentional: HA's frontend treats a
                     # missing default on a `Required` multi-select as
                     # "everything selected", which is dangerous for

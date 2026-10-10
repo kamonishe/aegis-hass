@@ -21,6 +21,7 @@
                 "title": "Bereiche auswählen",
                 "description": "Wählen Sie aus, welche Bereiche (Hubs) hinzugefügt werden sollen.",
                 "data": {
+                    "account_label": "Kontobezeichnung",
                     "spaces": "Bereiche"
                 }
             },

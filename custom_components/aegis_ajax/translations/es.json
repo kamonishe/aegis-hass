@@ -21,6 +21,7 @@
                 "title": "Seleccionar espacios",
                 "description": "Elige que espacios (hubs) anadir.",
                 "data": {
+                    "account_label": "Etiqueta de cuenta",
                     "spaces": "Espacios"
                 }
             },

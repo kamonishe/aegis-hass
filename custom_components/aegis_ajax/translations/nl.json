@@ -21,6 +21,7 @@
                 "title": "Selecteer ruimtes",
                 "description": "Kies welke ruimtes (hubs) u wilt toevoegen.",
                 "data": {
+                    "account_label": "Accountlabel",
                     "spaces": "Ruimtes"
                 }
             },

@@ -21,6 +21,7 @@
                 "title": "Vælg spaces",
                 "description": "Vælg hvilke spaces (hubs), der skal tilføjes.",
                 "data": {
+                    "account_label": "Kontomærkat",
                     "spaces": "Spaces"
                 }
             },

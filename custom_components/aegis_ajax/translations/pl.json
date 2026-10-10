@@ -21,6 +21,7 @@
                 "title": "Wybierz przestrzenie",
                 "description": "Wybierz przestrzenie (huby) do dodania.",
                 "data": {
+                    "account_label": "Etykieta konta",
                     "spaces": "Przestrzenie"
                 }
             },
