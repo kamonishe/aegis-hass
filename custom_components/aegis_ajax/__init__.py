@@ -142,6 +142,9 @@ def _migrate_account_scoped_entity_ids(hass: HomeAssistant, entry: ConfigEntry) 
     from homeassistant.helpers import entity_registry as er  # noqa: PLC0415
 
     registry = er.async_get(hass)
+    if not getattr(registry, "loaded", False):
+        _LOGGER.debug("Skipping Aegis entity-ID migration until the entity registry is loaded")
+        return
     prefix = f"{DOMAIN}_{entry.entry_id}_"
     migrated = 0
     for registry_entry in er.async_entries_for_config_entry(registry, entry.entry_id):

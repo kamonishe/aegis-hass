@@ -120,8 +120,8 @@ async def test_migrates_legacy_entity_ids_without_renaming_entities(tmp_path: Pa
 
     hass = HomeAssistant(str(tmp_path))
     hass.config_entries = MagicMock()
-    alice = SimpleNamespace(entry_id="alice")
-    bob = SimpleNamespace(entry_id="bob")
+    alice = SimpleNamespace(entry_id="alice", pref_disable_new_entities=False, disabled_by=None)
+    bob = SimpleNamespace(entry_id="bob", pref_disable_new_entities=False, disabled_by=None)
     hass.config_entries.async_entries.return_value = [alice, bob]
     with patch(
         "homeassistant.helpers.device_registry.async_get",
