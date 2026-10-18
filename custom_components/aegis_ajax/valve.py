@@ -25,7 +25,11 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from custom_components.aegis_ajax.api.models import DeviceCommand
 from custom_components.aegis_ajax.coordinator import AjaxCobrandedCoordinator
 from custom_components.aegis_ajax.device_handlers import capabilities_for
-from custom_components.aegis_ajax.entity import async_send_device_command, build_device_info
+from custom_components.aegis_ajax.entity import (
+    account_scoped_unique_id,
+    async_send_device_command,
+    build_device_info,
+)
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -63,7 +67,9 @@ class AjaxValve(CoordinatorEntity[AjaxCobrandedCoordinator], ValveEntity):
     def __init__(self, coordinator: AjaxCobrandedCoordinator, device_id: str) -> None:
         super().__init__(coordinator)
         self._device_id = device_id
-        self._attr_unique_id = f"aegis_ajax_{device_id}_valve"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_valve"
+        )
         device = coordinator.devices.get(device_id)
         if device:
             self._attr_device_info = build_device_info(

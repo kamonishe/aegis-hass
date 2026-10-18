@@ -27,6 +27,7 @@ from custom_components.aegis_ajax.const import (
 from custom_components.aegis_ajax.coordinator import AjaxCobrandedCoordinator
 from custom_components.aegis_ajax.device_handlers import capabilities_for
 from custom_components.aegis_ajax.entity import (
+    account_scoped_unique_id,
     async_send_device_command,
     async_set_chimes_mode,
     build_device_info,
@@ -243,7 +244,9 @@ class AjaxSwitch(CoordinatorEntity[AjaxCobrandedCoordinator], SwitchEntity):
         self._hub_id = hub_id
         self._device_type = device_type
         self._channel = channel
-        self._attr_unique_id = f"aegis_ajax_{device_id}_switch_{channel}"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_switch_{channel}"
+        )
         total_channels = SWITCH_DEVICE_TYPES.get(device_type, 1)
         if total_channels > 1:
             self._attr_translation_key = f"channel_{channel}"
@@ -322,7 +325,9 @@ class AjaxBypassSwitch(CoordinatorEntity[AjaxCobrandedCoordinator], SwitchEntity
         self._device_id = device_id
         self._hub_id = hub_id
         self._device_type = device_type
-        self._attr_unique_id = f"aegis_ajax_{device_id}_bypass"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_bypass"
+        )
         device = coordinator.devices.get(device_id)
         if device:
             self._attr_device_info = build_device_info(
@@ -408,7 +413,9 @@ class AjaxNightModeArmSwitch(CoordinatorEntity[AjaxCobrandedCoordinator], Switch
         self._device_id = device_id
         self._hub_id = hub_id
         self._device_type = device_type
-        self._attr_unique_id = f"aegis_ajax_{device_id}_night_mode_arm"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_night_mode_arm"
+        )
         device = coordinator.devices.get(device_id)
         if device:
             self._attr_device_info = build_device_info(
@@ -475,7 +482,7 @@ class AjaxChimeSwitch(CoordinatorEntity[AjaxCobrandedCoordinator], SwitchEntity)
         super().__init__(coordinator)
         self._space_id = space_id
         self._hub_id = hub_id
-        self._attr_unique_id = f"aegis_ajax_{hub_id}_chime"
+        self._attr_unique_id = account_scoped_unique_id(coordinator, f"aegis_ajax_{hub_id}_chime")
         hub_device = coordinator.devices.get(hub_id)
         if hub_device:
             self._attr_device_info = build_device_info(hub_device, coordinator.rooms)

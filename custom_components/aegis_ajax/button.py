@@ -15,6 +15,7 @@ from custom_components.aegis_ajax.const import DOMAIN
 from custom_components.aegis_ajax.coordinator import AjaxCobrandedCoordinator
 from custom_components.aegis_ajax.device_handlers import capabilities_for
 from custom_components.aegis_ajax.entity import (
+    account_scoped_unique_id,
     async_start_sound_test,
     build_device_info,
 )
@@ -81,7 +82,9 @@ class AjaxRefreshHubButton(CoordinatorEntity[AjaxCobrandedCoordinator], ButtonEn
     def __init__(self, coordinator: AjaxCobrandedCoordinator, hub_id: str) -> None:
         super().__init__(coordinator)
         self._hub_id = hub_id
-        self._attr_unique_id = f"aegis_ajax_{hub_id}_refresh_hub"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{hub_id}_refresh_hub"
+        )
         hub_device = coordinator.devices.get(hub_id)
         if hub_device is not None:
             self._attr_device_info = build_device_info(hub_device, coordinator.rooms)
@@ -112,7 +115,9 @@ class AjaxRestoreAfterAlarmButton(CoordinatorEntity[AjaxCobrandedCoordinator], B
     def __init__(self, coordinator: AjaxCobrandedCoordinator, hub_id: str) -> None:
         super().__init__(coordinator)
         self._hub_id = hub_id
-        self._attr_unique_id = f"aegis_ajax_{hub_id}_restore_after_alarm"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{hub_id}_restore_after_alarm"
+        )
         self._last_press_at = -self.MIN_PRESS_INTERVAL
         hub_device = coordinator.devices.get(hub_id)
         if hub_device is not None:
@@ -148,7 +153,9 @@ class AjaxCapturePhotoButton(CoordinatorEntity[AjaxCobrandedCoordinator], Button
         self._device_id = device_id
         self._hub_id = hub_id
         self._device_type = device_type
-        self._attr_unique_id = f"aegis_ajax_{device_id}_capture_photo"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_capture_photo"
+        )
         device = coordinator.devices.get(device_id)
         if device:
             self._attr_device_info = build_device_info(
@@ -256,7 +263,9 @@ class AjaxSirenSoundTestButton(CoordinatorEntity[AjaxCobrandedCoordinator], Butt
     def __init__(self, coordinator: AjaxCobrandedCoordinator, device_id: str) -> None:
         super().__init__(coordinator)
         self._device_id = device_id
-        self._attr_unique_id = f"aegis_ajax_{device_id}_siren_sound_test"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_siren_sound_test"
+        )
         self._last_press_at = -self.MIN_PRESS_INTERVAL
         device = coordinator.devices.get(device_id)
         if device:

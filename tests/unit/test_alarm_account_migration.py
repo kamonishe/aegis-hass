@@ -112,3 +112,54 @@ async def test_migration_preserves_entity_id_and_other_account(tmp_path: Path) -
         assert {panel.unique_id for panel in panels}.isdisjoint(
             panel.unique_id for panel in bobs_panels
         )
+
+
+async def test_migrates_legacy_entity_ids_without_renaming_entities(tmp_path: Path) -> None:
+    """All non-panel entities gain account scope while keeping entity IDs."""
+    from custom_components.aegis_ajax import _migrate_account_scoped_entity_ids
+
+    hass = HomeAssistant(str(tmp_path))
+    hass.config_entries = MagicMock()
+    alice = SimpleNamespace(entry_id="alice")
+    bob = SimpleNamespace(entry_id="bob")
+    hass.config_entries.async_entries.return_value = [alice, bob]
+    with patch(
+        "homeassistant.helpers.device_registry.async_get",
+        return_value=MagicMock(async_wait_loaded=AsyncMock()),
+    ):
+        registry = er.async_get(hass)
+        await registry.async_load()
+    with patch.object(registry, "async_schedule_save"):
+        legacy = registry.async_get_or_create(
+            "binary_sensor",
+            "aegis_ajax",
+            "aegis_ajax_315C2836_external_contact_broken",
+            config_entry=alice,
+            suggested_object_id="staircase_door",
+        )
+        already_scoped = registry.async_get_or_create(
+            "button",
+            "aegis_ajax",
+            "aegis_ajax_alice_315C2836_siren_sound_test",
+            config_entry=alice,
+            suggested_object_id="siren_test",
+        )
+        other_account = registry.async_get_or_create(
+            "binary_sensor",
+            "aegis_ajax",
+            "aegis_ajax_other_account_external_contact_broken",
+            config_entry=bob,
+            suggested_object_id="guest_door",
+        )
+        _migrate_account_scoped_entity_ids(hass, alice)
+
+    assert registry.async_get(legacy.entity_id).unique_id == (
+        "aegis_ajax_alice_315C2836_external_contact_broken"
+    )
+    assert registry.async_get(legacy.entity_id).entity_id == "binary_sensor.staircase_door"
+    assert registry.async_get(already_scoped.entity_id).unique_id == (
+        "aegis_ajax_alice_315C2836_siren_sound_test"
+    )
+    assert registry.async_get(other_account.entity_id).unique_id == (
+        "aegis_ajax_other_account_external_contact_broken"
+    )

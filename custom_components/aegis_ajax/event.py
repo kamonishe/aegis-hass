@@ -19,7 +19,7 @@ from custom_components.aegis_ajax.const import (
 )
 from custom_components.aegis_ajax.coordinator import AjaxCobrandedCoordinator
 from custom_components.aegis_ajax.device_handlers import capabilities_for
-from custom_components.aegis_ajax.entity import build_device_info
+from custom_components.aegis_ajax.entity import account_scoped_unique_id, build_device_info
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -79,7 +79,7 @@ class AjaxSecurityEvent(_AlwaysAvailable, CoordinatorEntity[AjaxCobrandedCoordin
         space = coordinator.spaces.get(space_id)
         hub_id = space.hub_id if space else space_id
         self._hub_id = hub_id
-        self._attr_unique_id = f"aegis_ajax_{hub_id}_event"
+        self._attr_unique_id = account_scoped_unique_id(coordinator, f"aegis_ajax_{hub_id}_event")
         self._attr_event_types = ALL_EVENT_TYPES
         hub_device = coordinator.devices.get(hub_id)
         if hub_device:
@@ -143,7 +143,9 @@ class AjaxDoorbellEvent(_AlwaysAvailable, CoordinatorEntity[AjaxCobrandedCoordin
     def __init__(self, coordinator: AjaxCobrandedCoordinator, device_id: str) -> None:
         super().__init__(coordinator)
         self._device_id = device_id
-        self._attr_unique_id = f"aegis_ajax_{device_id}_doorbell_event"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_doorbell_event"
+        )
         device = coordinator.devices.get(device_id)
         if device is not None:
             self._attr_device_info = build_device_info(
@@ -204,7 +206,9 @@ class AjaxButtonPressEvent(
     def __init__(self, coordinator: AjaxCobrandedCoordinator, device_id: str) -> None:
         super().__init__(coordinator)
         self._device_id = device_id
-        self._attr_unique_id = f"aegis_ajax_{device_id}_button_press_event"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_button_press_event"
+        )
         device = coordinator.devices.get(device_id)
         if device is not None:
             self._attr_device_info = build_device_info(

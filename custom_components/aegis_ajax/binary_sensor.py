@@ -17,7 +17,11 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from custom_components.aegis_ajax.const import DOMAIN, MANUFACTURER, SIGNAL_NEW_DEVICE
 from custom_components.aegis_ajax.coordinator import AjaxCobrandedCoordinator
 from custom_components.aegis_ajax.device_handlers import capabilities_for
-from custom_components.aegis_ajax.entity import build_device_info, via_device_fields
+from custom_components.aegis_ajax.entity import (
+    account_scoped_unique_id,
+    build_device_info,
+    via_device_fields,
+)
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -246,7 +250,9 @@ class AjaxBinarySensor(CoordinatorEntity[AjaxCobrandedCoordinator], BinarySensor
         self._device_id = device_id
         self._status_key = status_key
         self._type_info = BINARY_SENSOR_TYPES[status_key]
-        self._attr_unique_id = f"aegis_ajax_{device_id}_{status_key}"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_{status_key}"
+        )
         self._attr_device_class = self._type_info.device_class
         self._attr_translation_key = self._type_info.translation_key
         if self._type_info.entity_category is not None:
@@ -313,7 +319,9 @@ class AjaxConnectivitySensor(CoordinatorEntity[AjaxCobrandedCoordinator], Binary
     def __init__(self, coordinator: AjaxCobrandedCoordinator, device_id: str) -> None:
         super().__init__(coordinator)
         self._device_id = device_id
-        self._attr_unique_id = f"aegis_ajax_{device_id}_connectivity"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_connectivity"
+        )
         device = coordinator.devices.get(device_id)
         if device:
             self._attr_device_info = build_device_info(
@@ -338,7 +346,9 @@ class AjaxProblemSensor(CoordinatorEntity[AjaxCobrandedCoordinator], BinarySenso
     def __init__(self, coordinator: AjaxCobrandedCoordinator, device_id: str) -> None:
         super().__init__(coordinator)
         self._device_id = device_id
-        self._attr_unique_id = f"aegis_ajax_{device_id}_problem"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_problem"
+        )
         device = coordinator.devices.get(device_id)
         if device:
             self._attr_device_info = build_device_info(
@@ -383,7 +393,9 @@ class AjaxKeyfobActiveSensor(CoordinatorEntity[AjaxCobrandedCoordinator], Binary
     def __init__(self, coordinator: AjaxCobrandedCoordinator, keyfob_id: str) -> None:
         super().__init__(coordinator)
         self._keyfob_id = keyfob_id
-        self._attr_unique_id = f"aegis_ajax_{keyfob_id}_active"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{keyfob_id}_active"
+        )
         keyfob = coordinator.keyfobs.get(keyfob_id)
         if keyfob:
             # The entity's own name is the keyfob name; with has_entity_name the
@@ -446,7 +458,9 @@ class AjaxCraConnectionSensor(CoordinatorEntity[AjaxCobrandedCoordinator], Binar
         super().__init__(coordinator)
         self._space_id = space_id
         self._hub_id = hub_id
-        self._attr_unique_id = f"aegis_ajax_{hub_id}_monitoring_active"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{hub_id}_monitoring_active"
+        )
         hub_device = coordinator.devices.get(hub_id)
         if hub_device:
             self._attr_device_info = build_device_info(hub_device, coordinator.rooms)
@@ -560,7 +574,9 @@ class AjaxHubNetworkBinarySensor(_HubNetworkBinarySensor):
         self._spec = spec
         self._attr_device_class = spec.device_class
         self._attr_translation_key = spec.translation_key
-        self._attr_unique_id = f"aegis_ajax_{hub_id}_{spec.translation_key}"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{hub_id}_{spec.translation_key}"
+        )
 
     @property
     def available(self) -> bool:

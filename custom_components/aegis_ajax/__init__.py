@@ -82,7 +82,10 @@ from custom_components.aegis_ajax.const import (  # noqa: E402
     LABELS,
 )
 from custom_components.aegis_ajax.coordinator import AjaxCobrandedCoordinator  # noqa: E402
-from custom_components.aegis_ajax.entity import build_device_info, is_hub_device  # noqa: E402
+from custom_components.aegis_ajax.entity import (  # noqa: E402
+    build_device_info,
+    is_hub_device,
+)
 from custom_components.aegis_ajax.repairs import async_check_grpcio_version  # noqa: E402
 
 if TYPE_CHECKING:
@@ -124,6 +127,47 @@ _CUSTOM_SERVICE_NAMES = (
     "terminate_client_session",
     "terminate_other_client_sessions",
 )
+
+
+def _migrate_account_scoped_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Move legacy entity IDs under this account's unique-ID namespace.
+
+    Before multi-account support, every platform used the Ajax device ID alone.
+    Two accounts with the same device IDs then collided in HA's global entity
+    registry and the second account's entities were discarded. Keep each
+    existing entity_id while changing its unique_id to include the owning
+    config-entry ID. Alarm panels have their own migration because their
+    historical IDs use a separate ``aegis_ajax_alarm_`` format.
+    """
+    from homeassistant.helpers import entity_registry as er  # noqa: PLC0415
+
+    registry = er.async_get(hass)
+    prefix = f"{DOMAIN}_{entry.entry_id}_"
+    migrated = 0
+    for registry_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if registry_entry.platform != DOMAIN or registry_entry.domain == "alarm_control_panel":
+            continue
+        unique_id = registry_entry.unique_id or ""
+        if not unique_id.startswith(f"{DOMAIN}_") or unique_id.startswith(prefix):
+            continue
+        new_unique_id = f"{prefix}{unique_id.removeprefix(f'{DOMAIN}_')}"
+        try:
+            registry.async_update_entity(registry_entry.entity_id, new_unique_id=new_unique_id)
+        except ValueError:
+            _LOGGER.warning(
+                "Could not migrate Aegis entity %s from unique ID %s to %s",
+                registry_entry.entity_id,
+                unique_id,
+                new_unique_id,
+            )
+            continue
+        migrated += 1
+    if migrated:
+        _LOGGER.info(
+            "Migrated %d Aegis entity unique IDs for account %s",
+            migrated,
+            entry.entry_id,
+        )
 
 
 async def _resolve_target_space_ids(
@@ -641,6 +685,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AjaxCobrandedConfigEntry
     entry.async_on_unload(unsub_cleanup)
 
     _async_register_hub_devices(hass, entry, coordinator)
+    _migrate_account_scoped_entity_ids(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Auto-label entities for easy grouping in automations.

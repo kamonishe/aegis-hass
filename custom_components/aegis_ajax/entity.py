@@ -46,6 +46,26 @@ if TYPE_CHECKING:
 _VIA_DEVICE_ID_SUPPORTED = "via_device_id" in DeviceInfo.__annotations__
 
 
+def account_scoped_unique_id(coordinator: AjaxCobrandedCoordinator, legacy_unique_id: str) -> str:
+    """Scope an entity unique ID to the Ajax account that owns it.
+
+    Ajax device IDs are only unique within an account. The old IDs therefore
+    collided when two accounts exposed the same hub or device. Keep the
+    legacy value for test/standalone coordinators without an entry ID, while
+    real config entries get a stable account prefix.
+    """
+    entry_id = getattr(coordinator, "entry_id", "")
+    if not isinstance(entry_id, str) or not entry_id:
+        return legacy_unique_id
+    prefix = f"{DOMAIN}_{entry_id}_"
+    if legacy_unique_id.startswith(prefix):
+        return legacy_unique_id
+    domain_prefix = f"{DOMAIN}_"
+    if not legacy_unique_id.startswith(domain_prefix):
+        return legacy_unique_id
+    return f"{prefix}{legacy_unique_id.removeprefix(domain_prefix)}"
+
+
 def is_hub_device(device: Device) -> bool:
     """Whether an Ajax device row is a hub (the root of its device tree)."""
     return device.device_type.startswith("hub")

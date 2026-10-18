@@ -16,7 +16,7 @@ from custom_components.aegis_ajax.api.webrtc import CloudVideoSession
 from custom_components.aegis_ajax.const import CONF_CLOUD_VIDEO, DEFAULT_CLOUD_VIDEO
 from custom_components.aegis_ajax.coordinator import AjaxCobrandedCoordinator
 from custom_components.aegis_ajax.device_handlers import capabilities_for
-from custom_components.aegis_ajax.entity import build_device_info
+from custom_components.aegis_ajax.entity import account_scoped_unique_id, build_device_info
 from custom_components.aegis_ajax.video_bridge import DATA_KEY, async_get_bridge
 
 try:
@@ -99,7 +99,9 @@ class AjaxCamera(CoordinatorEntity[AjaxCobrandedCoordinator], Camera):
         self._device_id = device_id
         self._hub_id = hub_id
         self._device_type = device_type
-        self._attr_unique_id = f"aegis_ajax_{device_id}_camera"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_camera"
+        )
         self._last_image_url: str | None = None
         self._last_image: bytes | None = None
         self._photo_revision = 0
@@ -190,7 +192,9 @@ class AjaxCloudVideoCamera(CoordinatorEntity[AjaxCobrandedCoordinator], Camera):
         Camera.__init__(self)
         self._device_id = device_id
         self._video_edge_id, self._channel_id = source
-        self._attr_unique_id = f"aegis_ajax_{device_id}_cloud_video"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_cloud_video"
+        )
         self._token = secrets.token_urlsafe(24)
         self._last_session_at = 0.0
         self._sessions: set[CloudVideoSession] = set()

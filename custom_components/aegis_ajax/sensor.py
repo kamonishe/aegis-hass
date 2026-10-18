@@ -26,7 +26,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from custom_components.aegis_ajax.api.models import MonitoringCompanyStatus
 from custom_components.aegis_ajax.coordinator import AjaxCobrandedCoordinator
 from custom_components.aegis_ajax.device_handlers import capabilities_for
-from custom_components.aegis_ajax.entity import build_device_info
+from custom_components.aegis_ajax.entity import account_scoped_unique_id, build_device_info
 
 # Fallback voltage used to derive instantaneous power when the device
 # hasn't reported a real voltage reading yet (#123). Recent WallSwitch
@@ -229,7 +229,7 @@ def _remove_orphan_outlet_power_derived(
     for device_id, device in coordinator.devices.items():
         if not capabilities_for(device).has_direct_power:
             continue
-        unique_id = f"aegis_ajax_{device_id}_power_derived"
+        unique_id = account_scoped_unique_id(coordinator, f"aegis_ajax_{device_id}_power_derived")
         entity_id = registry.async_get_entity_id("sensor", "aegis_ajax", unique_id)
         if entity_id is None:
             continue
@@ -253,7 +253,9 @@ class AjaxSensor(CoordinatorEntity[AjaxCobrandedCoordinator], SensorEntity):
         self._device_id = device_id
         self._sensor_key = sensor_key
         self._type_info = SENSOR_TYPES[sensor_key]
-        self._attr_unique_id = f"aegis_ajax_{device_id}_{sensor_key}"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_{sensor_key}"
+        )
         self._attr_device_class = self._type_info.device_class
         self._attr_state_class = self._type_info.state_class
         self._attr_native_unit_of_measurement = self._type_info.unit
@@ -321,7 +323,9 @@ class AjaxSimImeiSensor(AjaxSimBaseSensor):
 
     def __init__(self, coordinator: AjaxCobrandedCoordinator, hub_id: str) -> None:
         super().__init__(coordinator, hub_id)
-        self._attr_unique_id = f"aegis_ajax_{hub_id}_sim_imei"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{hub_id}_sim_imei"
+        )
 
     @property
     def native_value(self) -> str | None:
@@ -341,7 +345,9 @@ class AjaxHubMonitoringCompanySensor(CoordinatorEntity[AjaxCobrandedCoordinator]
         super().__init__(coordinator)
         self._space_id = space_id
         self._hub_id = hub_id
-        self._attr_unique_id = f"aegis_ajax_{hub_id}_monitoring_company"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{hub_id}_monitoring_company"
+        )
         hub_device = coordinator.devices.get(hub_id)
         if hub_device:
             self._attr_device_info = build_device_info(hub_device, coordinator.rooms)
@@ -455,7 +461,9 @@ class AjaxHubNetworkSensor(_HubNetworkSensor):
         spec = _HUB_NET_SPECS_BY_KEY[spec_key]
         self._spec = spec
         self._attr_translation_key = spec.translation_key
-        self._attr_unique_id = f"aegis_ajax_{hub_id}_{spec.translation_key}"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{hub_id}_{spec.translation_key}"
+        )
         self._attr_entity_registry_enabled_default = spec.enabled_default
 
     @property
@@ -555,7 +563,9 @@ class AjaxDeviceCurrentSensor(_AjaxDeviceReadingsBase):
 
     def __init__(self, coordinator: AjaxCobrandedCoordinator, device_id: str) -> None:
         super().__init__(coordinator, device_id)
-        self._attr_unique_id = f"aegis_ajax_{device_id}_current"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_current"
+        )
 
     @property
     def _live_native_value(self) -> float | None:
@@ -583,7 +593,9 @@ class AjaxDeviceVoltageSensor(_AjaxDeviceReadingsBase):
 
     def __init__(self, coordinator: AjaxCobrandedCoordinator, device_id: str) -> None:
         super().__init__(coordinator, device_id)
-        self._attr_unique_id = f"aegis_ajax_{device_id}_voltage"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_voltage"
+        )
 
     @property
     def _live_native_value(self) -> float | None:
@@ -611,7 +623,9 @@ class AjaxDeviceEnergyConsumedSensor(_AjaxDeviceReadingsBase):
 
     def __init__(self, coordinator: AjaxCobrandedCoordinator, device_id: str) -> None:
         super().__init__(coordinator, device_id)
-        self._attr_unique_id = f"aegis_ajax_{device_id}_energy_consumed"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_energy_consumed"
+        )
 
     @property
     def _live_native_value(self) -> float | None:
@@ -639,7 +653,9 @@ class AjaxDeviceDerivedPowerSensor(_AjaxDeviceReadingsBase):
 
     def __init__(self, coordinator: AjaxCobrandedCoordinator, device_id: str) -> None:
         super().__init__(coordinator, device_id)
-        self._attr_unique_id = f"aegis_ajax_{device_id}_power_derived"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_power_derived"
+        )
 
     @property
     def _live_native_value(self) -> float | None:
@@ -671,7 +687,9 @@ class AjaxDevicePowerSensor(_AjaxDeviceReadingsBase):
 
     def __init__(self, coordinator: AjaxCobrandedCoordinator, device_id: str) -> None:
         super().__init__(coordinator, device_id)
-        self._attr_unique_id = f"aegis_ajax_{device_id}_power"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_power"
+        )
 
     @property
     def _live_native_value(self) -> float | None:

@@ -42,6 +42,7 @@ from custom_components.aegis_ajax.api.hub_object import (
 from custom_components.aegis_ajax.const import DOMAIN
 from custom_components.aegis_ajax.coordinator import AjaxCobrandedCoordinator
 from custom_components.aegis_ajax.entity import (
+    account_scoped_unique_id,
     async_get_registered_device,
     build_device_info,
 )
@@ -111,7 +112,9 @@ class AjaxHubFirmwareUpdate(CoordinatorEntity[AjaxCobrandedCoordinator], UpdateE
     def __init__(self, coordinator: AjaxCobrandedCoordinator, hub_id: str) -> None:
         super().__init__(coordinator)
         self._hub_id = hub_id
-        self._attr_unique_id = f"aegis_ajax_{hub_id}_firmware"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{hub_id}_firmware"
+        )
         hub_device = coordinator.devices.get(hub_id)
         if hub_device:
             self._attr_device_info = build_device_info(
@@ -259,7 +262,9 @@ class AjaxDeviceFirmwareUpdate(CoordinatorEntity[AjaxCobrandedCoordinator], Upda
     def __init__(self, coordinator: AjaxCobrandedCoordinator, device_id: str) -> None:
         super().__init__(coordinator)
         self._device_id = device_id
-        self._attr_unique_id = f"aegis_ajax_{device_id}_firmware"
+        self._attr_unique_id = account_scoped_unique_id(
+            coordinator, f"aegis_ajax_{device_id}_firmware"
+        )
         device = coordinator.devices.get(device_id)
         if device:
             self._attr_device_info = build_device_info(
