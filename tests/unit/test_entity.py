@@ -12,6 +12,7 @@ from custom_components.aegis_ajax.const import DOMAIN, DeviceState
 from custom_components.aegis_ajax.entity import (
     account_entity_slug,
     account_scoped_entity_id,
+    account_scoped_object_id,
     async_get_registered_device,
     build_device_info,
     via_device_fields,
@@ -48,6 +49,11 @@ def test_account_entity_slug_prefers_persisted_value() -> None:
         == "main"
     )
     assert account_entity_slug(SimpleNamespace(data={"account_label": "Main Site"})) == "main_site"
+
+
+def test_account_scoped_object_id_uses_account_slug() -> None:
+    coordinator = SimpleNamespace(config_entry=SimpleNamespace(data={"account_label": "Main Site"}))
+    assert account_scoped_object_id(coordinator, "Front Door") == "main_site_front_door"
 
 
 def test_account_scoped_entity_id_is_idempotent() -> None:

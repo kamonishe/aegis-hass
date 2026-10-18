@@ -18,6 +18,7 @@ from custom_components.aegis_ajax.const import DOMAIN, MANUFACTURER, SIGNAL_NEW_
 from custom_components.aegis_ajax.coordinator import AjaxCobrandedCoordinator
 from custom_components.aegis_ajax.device_handlers import capabilities_for
 from custom_components.aegis_ajax.entity import (
+    account_scoped_object_id,
     account_scoped_unique_id,
     build_device_info,
     via_device_fields,
@@ -401,6 +402,9 @@ class AjaxKeyfobActiveSensor(CoordinatorEntity[AjaxCobrandedCoordinator], Binary
             # The entity's own name is the keyfob name; with has_entity_name the
             # device page lists it (e.g. "Front fob") under the "Keyfobs" device.
             self._attr_name = keyfob.name
+            suggested_object_id = account_scoped_object_id(coordinator, keyfob.name)
+            if suggested_object_id:
+                self._attr_suggested_object_id = suggested_object_id
             info = DeviceInfo(
                 identifiers={(DOMAIN, f"{keyfob.hub_id}_keyfobs")},
                 name="Keyfobs",

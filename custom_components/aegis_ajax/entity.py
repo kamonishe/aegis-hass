@@ -64,6 +64,18 @@ def account_entity_slug(entry: object) -> str:
     return f"ajax_{suffix}" if suffix else "ajax_account"
 
 
+def account_scoped_object_id(coordinator: AjaxCobrandedCoordinator, object_id: str) -> str | None:
+    """Build a new entity object ID for an account, when one is available."""
+    entry = getattr(coordinator, "config_entry", None)
+    if entry is None:
+        entry_id = getattr(coordinator, "entry_id", "")
+        if entry_id:
+            entry = getattr(coordinator, "hass", None).config_entries.async_get_entry(entry_id)
+    if entry is None:
+        return None
+    return f"{account_entity_slug(entry)}_{slugify(object_id)}"
+
+
 def account_scoped_entity_id(entity_id: str, account_slug: str) -> str:
     """Prefix an entity object ID with its owning account slug."""
     domain, separator, object_id = entity_id.partition(".")
