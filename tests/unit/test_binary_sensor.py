@@ -7,7 +7,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from custom_components.aegis_ajax.api.hts.hub_state import HubNetworkState
+from custom_components.aegis_ajax.api.hts.hub_state import (
+    KEY_ACTIVE_CHANNELS,
+    HubNetworkState,
+    parse_hub_params,
+)
 from custom_components.aegis_ajax.api.models import (
     Device,
     MonitoringCompany,
@@ -15,6 +19,7 @@ from custom_components.aegis_ajax.api.models import (
     Space,
 )
 from custom_components.aegis_ajax.binary_sensor import (
+    _WIRE_INPUT_DEVICE_TYPES,
     BINARY_SENSOR_TYPES,
     AjaxBinarySensor,
     AjaxConnectivitySensor,
@@ -158,11 +163,13 @@ class TestBinarySensorTypes:
         ):
             assert "delay_when_leaving" not in _sensor_keys_for(dtype), dtype
 
-    def test_wire_input_mt_gets_the_contact_sensor(self) -> None:
-        # Only the capture-validated family (#413); plain wire_input and
+    def test_wired_inputs_get_the_contact_sensor(self) -> None:
+        # Only the capture-validated families (#413); plain wire_input and
         # transmitter key the same concept on different sub-keys.
         assert "external_contact_open" in _DEVICE_TYPE_SENSORS["wire_input_mt"]
+        assert "external_contact_open" in _DEVICE_TYPE_SENSORS["wire_input_rs"]
         assert "external_contact_open" not in _DEVICE_TYPE_SENSORS["wire_input"]
+        assert "external_contact_open" not in _DEVICE_TYPE_SENSORS["transmitter"]
 
     def test_dual_curtain_outdoor_gets_a_motion_sensor(self) -> None:
         # #434: the family was missing from the map, so it fell through to the
@@ -929,17 +936,26 @@ class TestWireInputAlertSensor:
         )
         assert sensor.is_on is False
 
-    def test_transmitter_wire_input_alert_or_reduces_external_contact(self) -> None:
+    def test_every_wire_input_alert_family_is_or_reduced(self) -> None:
+        # wire_input_rs got the alert entity after the OR-reduce list was
+        # written and was left out of it; keep the two in step.
+        with_alert = {
+            dtype for dtype in _DEVICE_HANDLERS if "wire_input_alert" in _sensor_keys_for(dtype)
+        }
+        assert with_alert == _WIRE_INPUT_DEVICE_TYPES
+
+    @pytest.mark.parametrize("device_type", sorted(_WIRE_INPUT_DEVICE_TYPES))
+    def test_wire_input_alert_or_reduces_external_contact(self, device_type: str) -> None:
         # Issue #65: the Transmitter Jeweller may surface the intrusion line
         # via any of wire_input_status / external_contact_broken /
         # external_contact_alert depending on hub firmware. The unified
-        # entity must reflect any of them.
+        # entity must reflect any of them, on every wired-input family.
         for source in ("wire_input_alert", "external_contact_broken", "external_contact_alert"):
             device = Device(
                 id="tr-1",
                 hub_id="hub-1",
                 name="Transmitter",
-                device_type="transmitter",
+                device_type=device_type,
                 room_id=None,
                 group_id=None,
                 state=DeviceState.ONLINE,
@@ -953,7 +969,7 @@ class TestWireInputAlertSensor:
             sensor = AjaxBinarySensor(
                 coordinator=coordinator, device_id="tr-1", status_key="wire_input_alert"
             )
-            assert sensor.is_on is True, f"OR-reduce missed {source} on transmitter"
+            assert sensor.is_on is True, f"OR-reduce missed {source} on {device_type}"
 
     def test_door_protect_external_contact_broken_not_routed_as_alert(self) -> None:
         # Sanity check: the composite OR must apply ONLY to wire_input devices,
@@ -1070,7 +1086,9 @@ class TestAjaxConnectivitySensor:
 
 
 class TestAjaxProblemSensor:
-    def _make_device(self, malfunctions: int = 0) -> Device:
+    def _make_device(
+        self, malfunctions: int = 0, state: DeviceState = DeviceState.ONLINE
+    ) -> Device:
         return Device(
             id="dev-1",
             hub_id="hub-1",
@@ -1078,7 +1096,7 @@ class TestAjaxProblemSensor:
             device_type="door_protect",
             room_id=None,
             group_id=None,
-            state=DeviceState.ONLINE,
+            state=state,
             malfunctions=malfunctions,
             bypassed=False,
             statuses={},
@@ -1104,6 +1122,19 @@ class TestAjaxProblemSensor:
         coordinator.devices = {}
         sensor = AjaxProblemSensor(coordinator=coordinator, device_id="dev-1")
         assert sensor.is_on is False
+
+    def test_available_when_online(self) -> None:
+        coordinator = MagicMock()
+        coordinator.devices = {"dev-1": self._make_device()}
+        sensor = AjaxProblemSensor(coordinator=coordinator, device_id="dev-1")
+        assert sensor.available is True
+
+    def test_unavailable_when_offline(self) -> None:
+        # #585: an offline device kept reporting a stale "OK".
+        coordinator = MagicMock()
+        coordinator.devices = {"dev-1": self._make_device(state=DeviceState.OFFLINE)}
+        sensor = AjaxProblemSensor(coordinator=coordinator, device_id="dev-1")
+        assert sensor.available is False
 
     def test_unique_id(self) -> None:
         device = self._make_device()
@@ -1152,7 +1183,7 @@ class TestAjaxProblemSensor:
 
 
 class TestAjaxHubWifiSensor:
-    def _make_coordinator(self, wifi_connected: bool = True) -> MagicMock:
+    def _make_coordinator(self, wifi_connected: bool | None = True) -> MagicMock:
         hub_device = Device(
             id="hub-1",
             hub_id="hub-1",
@@ -1178,6 +1209,17 @@ class TestAjaxHubWifiSensor:
     def test_is_off_when_wifi_not_connected(self) -> None:
         sensor = AjaxHubWifiSensor(self._make_coordinator(False), "hub-1")
         assert sensor.is_on is False
+
+    def test_unknown_until_hub_reports_active_channels(self) -> None:
+        """#594 — a startup row without the key renders unknown, not off."""
+        coordinator = self._make_coordinator(None)
+        sensor = AjaxHubWifiSensor(coordinator, "hub-1")
+        assert sensor.available is True
+        assert sensor.is_on is None
+        coordinator.hub_network["hub-1"] = parse_hub_params(
+            {KEY_ACTIVE_CHANNELS: bytes([0b010])}, coordinator.hub_network["hub-1"]
+        )
+        assert sensor.is_on is True
 
     def test_available_when_hub_network_exists(self) -> None:
         sensor = AjaxHubWifiSensor(self._make_coordinator(True), "hub-1")

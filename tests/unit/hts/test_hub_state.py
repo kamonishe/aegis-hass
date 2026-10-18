@@ -33,11 +33,14 @@ from custom_components.aegis_ajax.api.hts.hub_state import (
 
 
 class TestHubNetworkStateDefaults:
-    def test_connections_default_false(self) -> None:
+    def test_connections_default_unknown(self) -> None:
+        # #594: a hub row without the active-channels key must not read
+        # as "disconnected".
         s = HubNetworkState()
-        assert s.ethernet_connected is False
-        assert s.wifi_connected is False
-        assert s.gsm_connected is False
+        assert s.ethernet_connected is None
+        assert s.wifi_connected is None
+        assert s.gsm_connected is None
+        assert s.primary_connection is None
 
     def test_signal_levels_default_unknown(self) -> None:
         s = HubNetworkState()
@@ -47,9 +50,6 @@ class TestHubNetworkStateDefaults:
 
     def test_externally_powered_default_false(self) -> None:
         assert HubNetworkState().externally_powered is False
-
-    def test_primary_connection_none_by_default(self) -> None:
-        assert HubNetworkState().primary_connection == "none"
 
     def test_is_frozen(self) -> None:
         s = HubNetworkState()
@@ -144,7 +144,8 @@ class TestPrimaryConnection:
         assert s.primary_connection == "gsm"
 
     def test_none_when_all_false(self) -> None:
-        assert HubNetworkState().primary_connection == "none"
+        s = HubNetworkState(ethernet_connected=False, wifi_connected=False, gsm_connected=False)
+        assert s.primary_connection == "none"
 
 
 # ---------------------------------------------------------------------------
@@ -423,7 +424,7 @@ class TestMergeWithExisting:
     def test_none_existing_uses_defaults(self) -> None:
         state = parse_hub_params({KEY_HUB_POWERED: bytes([1])}, existing=None)
         assert state.externally_powered is True
-        assert state.ethernet_connected is False  # default
+        assert state.ethernet_connected is None  # default: unreported (#594)
 
     def test_multiple_keys_merged(self) -> None:
         existing = HubNetworkState(gsm_connected=True)
@@ -787,6 +788,8 @@ _CONFIRMED_HTS_TEMPERATURE_SAMPLES: dict[str, tuple[bytes, float]] = {
     "home_siren": (b"\x17", 23.0),
     # #375: 0x1f = 31 °C in August for street siren double deck.
     "street_siren_double_deck": (b"\x1f", 31.0),
+    # #591: 0x10 = 16 °C outdoors at night.
+    "street_siren_fibra": (b"\x10", 16.0),
     # #412: two units captured on the same hub, 0x1d = 29 °C (308CE402) and
     # 0x1e = 30 °C (308CB897), both matching the app. One entry per family —
     # this dict records that the family reports 0x02, and the byte-to-degrees
@@ -889,6 +892,7 @@ class TestParseDeviceTemperatureC:
             "street_siren_double_deck",
             "street_siren_s_double_deck",
             "street_siren_double_deck_fibra",
+            "street_siren_fibra",
             "home_siren",
             "home_siren_g3",
             "home_siren_s",

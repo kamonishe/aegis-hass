@@ -54,7 +54,6 @@ BINARY_SENSOR_TYPES: dict[str, BinarySensorTypeInfo] = {
     "malfunction": BinarySensorTypeInfo(BinarySensorDeviceClass.PROBLEM, "malfunction"),
     "interference": BinarySensorTypeInfo(BinarySensorDeviceClass.PROBLEM, "interference"),
     "relay_stuck": BinarySensorTypeInfo(BinarySensorDeviceClass.PROBLEM, "relay_stuck"),
-    "always_active": BinarySensorTypeInfo(BinarySensorDeviceClass.RUNNING, "always_active"),
     "glass_break": BinarySensorTypeInfo(BinarySensorDeviceClass.SAFETY, "glass_break"),
     "vibration": BinarySensorTypeInfo(BinarySensorDeviceClass.VIBRATION, "vibration"),
     # DoorProtect Plus accelerometer fires `tilt` for sustained off-axis
@@ -89,12 +88,23 @@ BINARY_SENSOR_TYPES: dict[str, BinarySensorTypeInfo] = {
         entity_category=EntityCategory.DIAGNOSTIC,
         enabled_default=False,
     ),
+    # #597: read-only mirror of the detector's "Always active" setting, same
+    # presence-only status shape and same treatment as `delay_when_leaving`.
+    "always_active": BinarySensorTypeInfo(
+        None,
+        "always_active",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        enabled_default=False,
+    ),
 }
 
 # Devices whose single "alert" entity should OR-reduce several hub status
 # oneofs into one state, because Ajax hub firmwares disagree on which oneof
 # carries the open/closed transition for wired inputs.
-_WIRE_INPUT_DEVICE_TYPES: frozenset[str] = frozenset({"wire_input", "wire_input_mt", "transmitter"})
+# Every family with a `wire_input_alert` entity belongs here; a test guards it.
+_WIRE_INPUT_DEVICE_TYPES: frozenset[str] = frozenset(
+    {"wire_input", "wire_input_mt", "wire_input_rs", "transmitter"}
+)
 _WIRE_INPUT_ALERT_SOURCES: tuple[str, ...] = (
     "wire_input_alert",
     "external_contact_broken",
@@ -337,7 +347,8 @@ class AjaxProblemSensor(CoordinatorEntity[AjaxCobrandedCoordinator], BinarySenso
 
     @property
     def available(self) -> bool:
-        return self.coordinator.devices.get(self._device_id) is not None
+        device = self.coordinator.devices.get(self._device_id)
+        return device is not None and device.is_online
 
     @property
     def is_on(self) -> bool:
@@ -564,11 +575,13 @@ class AjaxHubNetworkBinarySensor(_HubNetworkBinarySensor):
         return base
 
     @property
-    def is_on(self) -> bool:
+    def is_on(self) -> bool | None:
         state = self.coordinator.hub_network.get(self._hub_id)
         if state is None:
             return False
-        return bool(getattr(state, self._spec.state_attr, False))
+        value = getattr(state, self._spec.state_attr, False)
+        # None = the hub hasn't reported it yet (#594): unknown, not off.
+        return None if value is None else bool(value)
 
 
 # Backwards-compatible aliases — async_setup_entry and tests instantiate

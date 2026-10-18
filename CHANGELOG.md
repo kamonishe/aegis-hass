@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.26.0] - 2026-10-16
+
+### Added
+- **Always active state for MotionProtect, MotionCam and CombiProtect (#597).** A read-only *Always active* entity shows whether the detector is set to stay active while the system is disarmed. It is a diagnostic entity, disabled by default like *Delay when leaving*; enable it on the device page if you want it. **Requests to Ajax:** none, the setting comes with the device data already received.
+- **Vehicle and pet detections from cameras fire events (#519).** Cameras report car and pet detections alongside person detections, but only person detections were handled, so the others were dropped. They now fire a `motion` event on `aegis_ajax_event` like person detections, and `raw_tag` (`car_detected`, `pet_detected`, `human_detected`) tells them apart. Detection alerts only reach Home Assistant when the account would get them in the Ajax app, and a user account also needs permission on the camera stream. **Requests to Ajax:** none, they come with the push already received.
+- **Contact sensor for Hub Hybrid wired inputs (#588).** Wired contacts on the hub's own inputs (`wire_input_rs`) get the same *Contact* (open / closed) entity as MultiTransmitter inputs, so a door's position shows in Home Assistant while the system is disarmed, as it does in the Ajax app. The hub reports these inputs with the same byte and meaning as the MultiTransmitter. **Requests to Ajax:** none, the value comes with the hub status already received.
+- **Internal temperature for StreetSiren Fibra (#591).** The siren gets the same *Temperature* entity as the other sirens, with the value the Ajax app shows. The hub was already sending it and it was ignored for this model. **Requests to Ajax:** none, the value comes with the hub status already received.
+
+### Fixed
+- **Hub Ethernet and Wi-Fi no longer show disconnected after a restart (#594).** Some hubs only report which connections are active when one changes, not when Home Assistant connects, so *Ethernet* and *Wi-Fi* started as disconnected until a cable was replugged. They now show as unknown until the hub reports, and *Connection type* stays empty until then. **Requests to Ajax:** none.
+- **Ready for Home Assistant 2026.11 (#593).** 2026.11 turns `DeviceInfo` into a dataclass. The check for whether the core supports `via_device_id` now reads it in a way that works on both the old and the new form, instead of relying on a compatibility layer Home Assistant plans to remove. **Requests to Ajax:** none.
+- **Wire input alert on Hub Hybrid wired inputs follows every hub firmware.** Some hub firmwares report a wired input's trigger through a different status than others, and the alert already checks all of them on MultiTransmitter and Transmitter inputs. Hub Hybrid wired inputs (`wire_input_rs`) only checked one, so on those firmwares their alert could stay *OK*. They now check all of them too. **Requests to Ajax:** none.
+- **Problem goes unavailable while the device is offline (#585).** Every other entity of an offline device goes unavailable, but *Problem* kept showing its last value, so a device that was turned off still read *OK*. It now goes unavailable too; *Connectivity* still reports the device as disconnected. **Requests to Ajax:** none.
+- **Capture photo goes unavailable while the camera is offline.** Like the other entities of an offline device, the button now shows as unavailable instead of accepting a press that could only time out after 15 seconds. A new test checks every entity of every device type for this, and `docs/invariants.md` lists the exceptions and why. **Requests to Ajax:** none, and a press on an offline camera no longer sends one.
+
 ## [1.25.0] - 2026-10-12
 
 ### Added
