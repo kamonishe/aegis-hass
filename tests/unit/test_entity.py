@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -9,6 +10,8 @@ import pytest
 from custom_components.aegis_ajax.api.models import Device, Room
 from custom_components.aegis_ajax.const import DOMAIN, DeviceState
 from custom_components.aegis_ajax.entity import (
+    account_entity_slug,
+    account_scoped_entity_id,
     async_get_registered_device,
     build_device_info,
     via_device_fields,
@@ -34,6 +37,25 @@ def _make_device(
         bypassed=False,
         statuses={},
         battery=None,
+    )
+
+
+def test_account_entity_slug_prefers_persisted_value() -> None:
+    assert (
+        account_entity_slug(
+            SimpleNamespace(data={"account_label": "Main Site", "account_entity_slug": "main"})
+        )
+        == "main"
+    )
+    assert account_entity_slug(SimpleNamespace(data={"account_label": "Main Site"})) == "main_site"
+
+
+def test_account_scoped_entity_id_is_idempotent() -> None:
+    assert account_scoped_entity_id("binary_sensor.front_door", "main") == (
+        "binary_sensor.main_front_door"
+    )
+    assert account_scoped_entity_id("binary_sensor.main_front_door", "main") == (
+        "binary_sensor.main_front_door"
     )
 
 

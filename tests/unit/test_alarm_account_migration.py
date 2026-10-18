@@ -114,6 +114,62 @@ async def test_migration_preserves_entity_id_and_other_account(tmp_path: Path) -
         )
 
 
+async def test_migrates_visible_entity_ids_under_account_slug(tmp_path: Path) -> None:
+    """Account labels prefix non-panel IDs while alarm panels keep their names."""
+    from custom_components.aegis_ajax import (
+        _ensure_account_entity_slug,
+        _migrate_account_entity_ids,
+    )
+
+    hass = HomeAssistant(str(tmp_path))
+    hass.config_entries = MagicMock()
+    alice = SimpleNamespace(
+        entry_id="alice",
+        data={"account_label": "Main Site"},
+        pref_disable_new_entities=False,
+        disabled_by=None,
+    )
+    bob = SimpleNamespace(
+        entry_id="bob",
+        data={"account_label": "Guest"},
+        pref_disable_new_entities=False,
+        disabled_by=None,
+    )
+    hass.config_entries.async_entries.return_value = [alice, bob]
+    hass.config_entries.async_update_entry.side_effect = lambda entry, *, data: setattr(
+        entry, "data", data
+    )
+    with patch(
+        "homeassistant.helpers.device_registry.async_get",
+        return_value=MagicMock(async_wait_loaded=AsyncMock()),
+    ):
+        registry = er.async_get(hass)
+        await registry.async_load()
+    with patch.object(registry, "async_schedule_save"):
+        entity = registry.async_get_or_create(
+            "binary_sensor",
+            "aegis_ajax",
+            "aegis_ajax_alice_315C2836_external_contact_broken",
+            config_entry=alice,
+            suggested_object_id="staircase_door",
+        )
+        old_entity_id = entity.entity_id
+        panel = registry.async_get_or_create(
+            "alarm_control_panel",
+            "aegis_ajax",
+            "aegis_ajax_alarm_alice_space",
+            config_entry=alice,
+            suggested_object_id="ajax_main_site_home",
+        )
+        account_slug = _ensure_account_entity_slug(hass, alice)
+        _migrate_account_entity_ids(hass, alice, account_slug)
+
+    assert account_slug == "main_site"
+    assert registry.async_get("binary_sensor.main_site_staircase_door") is not None
+    assert registry.async_get("alarm_control_panel.ajax_main_site_home") == panel
+    assert registry.async_get(old_entity_id) is None
+
+
 async def test_migrates_legacy_entity_ids_without_renaming_entities(tmp_path: Path) -> None:
     """All non-panel entities gain account scope while keeping entity IDs."""
     from custom_components.aegis_ajax import _migrate_account_scoped_entity_ids

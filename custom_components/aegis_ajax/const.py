@@ -3,6 +3,7 @@
 from enum import IntEnum, StrEnum
 
 DOMAIN = "aegis_ajax"
+ACCOUNT_ENTITY_SLUG = "account_entity_slug"
 
 # FCM rejection marker (#227, #464). Records the SHA-256 fingerprint of the
 # most recent credential set that Firebase Installations terminally rejected,

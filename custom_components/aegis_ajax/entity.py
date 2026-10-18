@@ -2,20 +2,21 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceEntry, DeviceInfo, DeviceRegistry
+from homeassistant.util import slugify
 
 from custom_components.aegis_ajax.const import (
+    ACCOUNT_ENTITY_SLUG,
     COMMAND_ERROR_TRANSLATION_KEYS,
     DOMAIN,
     MANUFACTURER,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     from custom_components.aegis_ajax.api.models import Device, DeviceCommand, Room
     from custom_components.aegis_ajax.coordinator import AjaxCobrandedCoordinator
 
@@ -44,6 +45,34 @@ if TYPE_CHECKING:
 # dataclass `DeviceInfo` became in 2026.11 (#593), which keeps
 # `__required_keys__`/`__optional_keys__` only as a compatibility layer.
 _VIA_DEVICE_ID_SUPPORTED = "via_device_id" in DeviceInfo.__annotations__
+
+
+def account_entity_slug(entry: object) -> str:
+    """Return the stable, human-readable slug used in entity IDs for an account."""
+    data = getattr(entry, "data", {})
+    if not isinstance(data, Mapping):
+        return "ajax_account"
+    stored = data.get(ACCOUNT_ENTITY_SLUG)
+    if isinstance(stored, str) and stored:
+        return stored
+    label = data.get("account_label")
+    slug = slugify(str(label)) if isinstance(label, str) else ""
+    if slug:
+        return slug
+    entry_id = getattr(entry, "entry_id", "")
+    suffix = slugify(str(entry_id)[-8:]) if entry_id else ""
+    return f"ajax_{suffix}" if suffix else "ajax_account"
+
+
+def account_scoped_entity_id(entity_id: str, account_slug: str) -> str:
+    """Prefix an entity object ID with its owning account slug."""
+    domain, separator, object_id = entity_id.partition(".")
+    if not separator or not object_id or not account_slug:
+        return entity_id
+    prefix = f"{account_slug}_"
+    if object_id.startswith(prefix):
+        return entity_id
+    return f"{domain}.{prefix}{object_id}"
 
 
 def account_scoped_unique_id(coordinator: AjaxCobrandedCoordinator, legacy_unique_id: str) -> str:

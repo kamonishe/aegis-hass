@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, cast
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import ServiceResponse, SupportsResponse, callback
 from homeassistant.helpers import device_registry as dr
+from homeassistant.util import slugify
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -66,6 +68,7 @@ except TypeError as exc:
 from custom_components.aegis_ajax.api.hts.client import HtsConnectionError  # noqa: E402
 from custom_components.aegis_ajax.api.session import log_fingerprint  # noqa: E402
 from custom_components.aegis_ajax.const import (  # noqa: E402
+    ACCOUNT_ENTITY_SLUG,
     APPLICATION_LABEL,
     CONF_AUTO_CREATE_LABELS,
     CONF_DELAY_PANEL_STATES,
@@ -83,6 +86,8 @@ from custom_components.aegis_ajax.const import (  # noqa: E402
 )
 from custom_components.aegis_ajax.coordinator import AjaxCobrandedCoordinator  # noqa: E402
 from custom_components.aegis_ajax.entity import (  # noqa: E402
+    account_entity_slug,
+    account_scoped_entity_id,
     build_device_info,
     is_hub_device,
 )
@@ -127,6 +132,45 @@ _CUSTOM_SERVICE_NAMES = (
     "terminate_client_session",
     "terminate_other_client_sessions",
 )
+
+
+def _ensure_account_entity_slug(hass: HomeAssistant, entry: ConfigEntry) -> str:
+    """Persist a stable, human-readable slug for an Ajax account."""
+    data = dict(entry.data)
+    stored = data.get(ACCOUNT_ENTITY_SLUG)
+    if isinstance(stored, str) and stored:
+        return stored
+
+    base = account_entity_slug(entry)
+    # Entries from before account labels were introduced use a deterministic
+    # entry-ID fallback and do not need a config-entry write during setup.
+    label = data.get("account_label")
+    if not isinstance(label, str) or not label.strip():
+        return base
+    used: set[str] = set()
+    for other in hass.config_entries.async_entries(DOMAIN):
+        if other.entry_id == entry.entry_id:
+            continue
+        other_data = getattr(other, "data", {})
+        if isinstance(other_data, Mapping):
+            other_stored = other_data.get(ACCOUNT_ENTITY_SLUG)
+            used.add(
+                other_stored
+                if isinstance(other_stored, str) and other_stored
+                else account_entity_slug(other)
+            )
+    candidate = base
+    if candidate in used:
+        suffix = slugify(entry.entry_id[-6:]) or "account"
+        candidate = f"{base}_{suffix}"
+        counter = 2
+        while candidate in used:
+            candidate = f"{base}_{suffix}_{counter}"
+            counter += 1
+
+    data[ACCOUNT_ENTITY_SLUG] = candidate
+    hass.config_entries.async_update_entry(entry, data=data)
+    return candidate
 
 
 def _migrate_account_scoped_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -176,6 +220,57 @@ def _migrate_account_scoped_entity_ids(hass: HomeAssistant, entry: ConfigEntry) 
             "Migrated %d Aegis entity unique IDs for account %s",
             migrated,
             entry.entry_id,
+        )
+
+
+def _migrate_account_entity_ids(hass: HomeAssistant, entry: ConfigEntry, account_slug: str) -> None:
+    """Prefix non-panel entity IDs with their owning account slug.
+
+    Entity unique IDs already identify the account. This second migration makes
+    the visible entity IDs useful when several accounts expose the same device
+    names. The registry entry is updated in place, so device associations and
+    names remain intact; callers still need to review YAML references to IDs
+    that changed.
+    """
+    from homeassistant.helpers import entity_registry as er  # noqa: PLC0415
+
+    registry = er.async_get(hass)
+    try:
+        registry_entries = er.async_entries_for_config_entry(registry, entry.entry_id)
+    except AttributeError:
+        _LOGGER.debug("Skipping Aegis account entity-ID migration until the registry is loaded")
+        return
+
+    migrated = 0
+    for registry_entry in registry_entries:
+        if registry_entry.platform != DOMAIN or registry_entry.domain == "alarm_control_panel":
+            continue
+        new_entity_id = account_scoped_entity_id(registry_entry.entity_id, account_slug)
+        if new_entity_id == registry_entry.entity_id:
+            continue
+        existing = registry.async_get(new_entity_id)
+        if existing is not None and existing.entity_id != registry_entry.entity_id:
+            _LOGGER.warning(
+                "Could not migrate Aegis entity %s to %s: the target entity ID is already used",
+                registry_entry.entity_id,
+                new_entity_id,
+            )
+            continue
+        try:
+            registry.async_update_entity(registry_entry.entity_id, new_entity_id=new_entity_id)
+        except ValueError:
+            _LOGGER.warning(
+                "Could not migrate Aegis entity %s to %s",
+                registry_entry.entity_id,
+                new_entity_id,
+            )
+            continue
+        migrated += 1
+    if migrated:
+        _LOGGER.info(
+            "Migrated %d Aegis entity IDs under account slug %s",
+            migrated,
+            account_slug,
         )
 
 
@@ -694,8 +789,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: AjaxCobrandedConfigEntry
     entry.async_on_unload(unsub_cleanup)
 
     _async_register_hub_devices(hass, entry, coordinator)
+    account_slug = _ensure_account_entity_slug(hass, entry)
     _migrate_account_scoped_entity_ids(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    _migrate_account_entity_ids(hass, entry, account_slug)
 
     # Auto-label entities for easy grouping in automations.
     # Users can disable this from the OptionsFlow when they prefer to manage
