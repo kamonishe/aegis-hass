@@ -142,12 +142,18 @@ def _migrate_account_scoped_entity_ids(hass: HomeAssistant, entry: ConfigEntry) 
     from homeassistant.helpers import entity_registry as er  # noqa: PLC0415
 
     registry = er.async_get(hass)
-    if not getattr(registry, "loaded", False):
+    try:
+        registry_entries = er.async_entries_for_config_entry(registry, entry.entry_id)
+    except AttributeError:
+        # Some setup tests and early startup paths can reach this hook before
+        # Home Assistant has loaded the entity registry. Defer migration to
+        # the normal entity-platform setup rather than breaking integration
+        # setup while the registry is still empty.
         _LOGGER.debug("Skipping Aegis entity-ID migration until the entity registry is loaded")
         return
     prefix = f"{DOMAIN}_{entry.entry_id}_"
     migrated = 0
-    for registry_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
+    for registry_entry in registry_entries:
         if registry_entry.platform != DOMAIN or registry_entry.domain == "alarm_control_panel":
             continue
         unique_id = registry_entry.unique_id or ""
