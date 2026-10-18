@@ -69,8 +69,9 @@ def account_scoped_object_id(coordinator: AjaxCobrandedCoordinator, object_id: s
     entry = getattr(coordinator, "config_entry", None)
     if entry is None:
         entry_id = getattr(coordinator, "entry_id", "")
-        if entry_id:
-            entry = getattr(coordinator, "hass", None).config_entries.async_get_entry(entry_id)
+        hass = getattr(coordinator, "hass", None)
+        if entry_id and hass is not None:
+            entry = hass.config_entries.async_get_entry(entry_id)
     if entry is None:
         return None
     return f"{account_entity_slug(entry)}_{slugify(object_id)}"
