@@ -8,6 +8,11 @@
                     "email": "Електронна пошта",
                     "password": "Пароль",
                     "app_label": "Назва додатку (co-branded назва)"
+                },
+                "data_description": {
+                    "email": "Електронна пошта, з якою ви входите в застосунок Ajax.",
+                    "password": "Пароль облікового запису Ajax. Home Assistant зберігає лише його хеш.",
+                    "app_label": "Застосунок, до якого належить обліковий запис: Ajax або co-branded застосунок. Якщо не впевнені, дивіться README."
                 }
             },
             "2fa": {
@@ -15,6 +20,9 @@
                 "description": "Введіть 6-значний код з вашого додатку автентифікації.",
                 "data": {
                     "totp_code": "Код TOTP"
+                },
+                "data_description": {
+                    "totp_code": "6-значний код із вашого застосунку автентифікації."
                 }
             },
             "select_spaces": {
@@ -23,6 +31,9 @@
                 "data": {
                     "account_label": "Мітка облікового запису",
                     "spaces": "Простори"
+                },
+                "data_description": {
+                    "spaces": "Простори (хаби), які слід додати до Home Assistant. Виберіть хоча б один."
                 }
             },
             "reconfigure": {
@@ -32,6 +43,11 @@
                     "email": "E-mail",
                     "password": "Пароль",
                     "app_label": "Мітка додатку"
+                },
+                "data_description": {
+                    "email": "Електронна пошта, з якою ви входите в застосунок Ajax.",
+                    "password": "Пароль облікового запису Ajax. Home Assistant зберігає лише його хеш.",
+                    "app_label": "Застосунок, до якого належить обліковий запис: Ajax або co-branded застосунок. Якщо не впевнені, дивіться README."
                 }
             },
             "reconfigure_2fa": {
@@ -39,6 +55,9 @@
                 "description": "Введіть 6-значний код з вашого додатку автентифікації.",
                 "data": {
                     "totp_code": "Код TOTP"
+                },
+                "data_description": {
+                    "totp_code": "6-значний код із вашого застосунку автентифікації."
                 }
             },
             "reauth_confirm": {
@@ -46,6 +65,9 @@
                 "description": "Ваша сесія Ajax для {email} вже недійсна. Введіть поточний пароль облікового запису, щоб відновити доступ.",
                 "data": {
                     "password": "Пароль"
+                },
+                "data_description": {
+                    "password": "Пароль облікового запису Ajax. Home Assistant зберігає лише його хеш."
                 }
             },
             "reauth_2fa": {
@@ -53,6 +75,9 @@
                 "description": "Введіть 6-значний код з вашого додатка автентифікатора.",
                 "data": {
                     "totp_code": "Код TOTP"
+                },
+                "data_description": {
+                    "totp_code": "6-значний код із вашого застосунку автентифікації."
                 }
             }
         },
@@ -68,7 +93,8 @@
             "account_locked": "Акаунт заблоковано. Спробуйте пізніше.",
             "reauth_successful": "Повторна автентифікація успішна.",
             "already_in_progress": "Налаштування вже виконується. Завершіть або скасуйте поточний процес.",
-            "reconfigure_successful": "Облікові дані успішно оновлено."
+            "reconfigure_successful": "Облікові дані успішно оновлено.",
+            "cannot_connect": "Не вдається підключитися до серверів Ajax."
         }
     },
     "options": {
@@ -328,6 +354,10 @@
         "fcm_never_delivered": {
             "title": "Push notifications are not arriving",
             "description": "Aegis has seen {events} events from your hub while the push client was running, and not one of them arrived over push. Your alarm state is not affected — it comes from the hub connection and from polling, never from push — but real-time events such as doorbell rings and intrusion alarms reach Home Assistant only over push, so those are being lost.\n\nThree things produce this and they look identical from here: the four FCM values may belong to a Firebase project your co-branded app's push provider does not send through, another registration may be holding your Ajax account's push destination, or the push connection may never have completed.\n\nWhat helps: re-enter the four values for your co-branded app, under Settings > Repairs or in the integration options. If the same Ajax account is used by another Home Assistant instance, try a separate account for this integration. This notice clears by itself as soon as one push arrives."
+        },
+        "pin_code_update": {
+            "title": "Задайте PIN-код тривоги ще раз",
+            "description": "PIN-код тривоги для цього облікового запису збережено в старішому форматі. Відкрийте параметри інтеграції та введіть PIN-код ще раз, щоб оновити його. Тим часом він і далі працює."
         }
     },
     "entity": {
@@ -583,6 +613,11 @@
             "cloud_video": {
                 "name": "Перегляд наживо"
             }
+        },
+        "alarm_control_panel": {
+            "group": {
+                "name": "Група {group_id}"
+            }
         }
     },
     "exceptions": {
@@ -627,6 +662,57 @@
         },
         "command_failed": {
             "message": "Не вдалося завершити команду. Хаб повернув: {reason}."
+        },
+        "session_entry_not_found": {
+            "message": "Для вказаного entry_id не знайдено облікового запису Aegis."
+        },
+        "session_entry_required": {
+            "message": "entry_id обов'язковий, якщо налаштовано більше одного облікового запису Aegis."
+        },
+        "confirm_required": {
+            "message": "Для запуску {service} потрібно `confirm: true`."
+        },
+        "panic_confirm_required": {
+            "message": "press_panic_button потрібно `confirm: true`: він надсилає тривожний сигнал на пульт охорони, який за більшістю договорів одразу викликає поліцію."
+        },
+        "session_id_invalid": {
+            "message": "session_id має бути додатним цілим числом."
+        },
+        "no_panel_for_target": {
+            "message": "{service}: для вказаної цілі не знайдено панелі тривоги Aegis."
+        },
+        "photo_mode_option_required": {
+            "message": "set_photo_on_demand_mode потребує принаймні `user` або `scenario`."
+        },
+        "sessions_list_failed": {
+            "message": "Не вдалося отримати список сеансів облікового запису Ajax: {error}"
+        },
+        "session_terminate_failed": {
+            "message": "Не вдалося завершити сеанс облікового запису Ajax: {error}"
+        },
+        "sessions_terminate_failed": {
+            "message": "Не вдалося завершити інші сеанси облікового запису Ajax: {error}"
+        },
+        "security_hub_detected_malfunctions": {
+            "message": "Неможливо увімкнути: відкриті датчики або несправності{details}"
+        },
+        "security_hub_not_connected": {
+            "message": "Неможливо увімкнути: хаб офлайн"
+        },
+        "security_hub_busy": {
+            "message": "Хаб зайнятий, спробуйте через кілька секунд"
+        },
+        "security_another_transition_is_in_progress": {
+            "message": "Інша операція увімкнення/вимкнення в процесі"
+        },
+        "security_disarm_rejected": {
+            "message": "Неможливо вимкнути: команду відхилено хабом"
+        },
+        "invalid_alarm_code": {
+            "message": "Невірний код тривоги"
+        },
+        "not_loaded": {
+            "message": "Жодного облікового запису Aegis for Ajax не завантажено. Перевірте інтеграцію на сторінці «Пристрої та служби»."
         }
     },
     "device_automation": {
@@ -678,6 +764,11 @@
                 "panic": "Паніка",
                 "tamper": "Втручання"
             }
+        }
+    },
+    "device": {
+        "keyfobs": {
+            "name": "Брелоки"
         }
     }
 }

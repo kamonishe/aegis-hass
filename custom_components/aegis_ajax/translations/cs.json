@@ -8,6 +8,11 @@
                     "email": "E-mail",
                     "password": "Heslo",
                     "app_label": "Označení aplikace (název co-branded aplikace)"
+                },
+                "data_description": {
+                    "email": "E-mail, kterým se přihlašujete do aplikace Ajax.",
+                    "password": "Heslo k účtu Ajax. Home Assistant ukládá jen jeho hash.",
+                    "app_label": "Aplikace, ke které účet patří: Ajax nebo co-branded aplikace. Pokud si nejste jisti, podívejte se do README."
                 }
             },
             "2fa": {
@@ -15,6 +20,9 @@
                 "description": "Zadejte 6místný kód z vaší ověřovací aplikace.",
                 "data": {
                     "totp_code": "Kód TOTP"
+                },
+                "data_description": {
+                    "totp_code": "Šestimístný kód z vaší ověřovací aplikace."
                 }
             },
             "select_spaces": {
@@ -23,6 +31,9 @@
                 "data": {
                     "account_label": "Štítek účtu",
                     "spaces": "Prostory"
+                },
+                "data_description": {
+                    "spaces": "Prostory (huby), které se mají přidat do Home Assistant. Vyberte alespoň jeden."
                 }
             },
             "reconfigure": {
@@ -32,6 +43,11 @@
                     "email": "E-mail",
                     "password": "Heslo",
                     "app_label": "Štítek aplikace"
+                },
+                "data_description": {
+                    "email": "E-mail, kterým se přihlašujete do aplikace Ajax.",
+                    "password": "Heslo k účtu Ajax. Home Assistant ukládá jen jeho hash.",
+                    "app_label": "Aplikace, ke které účet patří: Ajax nebo co-branded aplikace. Pokud si nejste jisti, podívejte se do README."
                 }
             },
             "reconfigure_2fa": {
@@ -39,6 +55,9 @@
                 "description": "Zadejte 6místný kód z vaší ověřovací aplikace.",
                 "data": {
                     "totp_code": "Kód TOTP"
+                },
+                "data_description": {
+                    "totp_code": "Šestimístný kód z vaší ověřovací aplikace."
                 }
             },
             "reauth_confirm": {
@@ -46,6 +65,9 @@
                 "description": "Vaše Ajax relace pro {email} již není platná. Zadejte aktuální heslo k účtu pro obnovení přístupu.",
                 "data": {
                     "password": "Heslo"
+                },
+                "data_description": {
+                    "password": "Heslo k účtu Ajax. Home Assistant ukládá jen jeho hash."
                 }
             },
             "reauth_2fa": {
@@ -53,6 +75,9 @@
                 "description": "Zadejte 6místný kód z vaší ověřovací aplikace.",
                 "data": {
                     "totp_code": "Kód TOTP"
+                },
+                "data_description": {
+                    "totp_code": "Šestimístný kód z vaší ověřovací aplikace."
                 }
             }
         },
@@ -68,7 +93,8 @@
             "account_locked": "Účet je uzamčen. Zkuste to prosím později.",
             "reauth_successful": "Opětovné ověření proběhlo úspěšně.",
             "already_in_progress": "Konfigurace již probíhá. Dokončete nebo zrušte stávající postup.",
-            "reconfigure_successful": "Přihlašovací údaje úspěšně aktualizovány."
+            "reconfigure_successful": "Přihlašovací údaje úspěšně aktualizovány.",
+            "cannot_connect": "Nelze se připojit k serverům Ajax."
         }
     },
     "options": {
@@ -328,6 +354,10 @@
         "fcm_never_delivered": {
             "title": "Push notifications are not arriving",
             "description": "Aegis has seen {events} events from your hub while the push client was running, and not one of them arrived over push. Your alarm state is not affected — it comes from the hub connection and from polling, never from push — but real-time events such as doorbell rings and intrusion alarms reach Home Assistant only over push, so those are being lost.\n\nThree things produce this and they look identical from here: the four FCM values may belong to a Firebase project your co-branded app's push provider does not send through, another registration may be holding your Ajax account's push destination, or the push connection may never have completed.\n\nWhat helps: re-enter the four values for your co-branded app, under Settings > Repairs or in the integration options. If the same Ajax account is used by another Home Assistant instance, try a separate account for this integration. This notice clears by itself as soon as one push arrives."
+        },
+        "pin_code_update": {
+            "title": "Znovu nastavte PIN alarmu",
+            "description": "PIN alarmu pro tento účet je uložen ve starším formátu. Otevřete možnosti integrace a zadejte PIN znovu, aby se aktualizoval. Do té doby funguje dál."
         }
     },
     "entity": {
@@ -583,6 +613,11 @@
             "cloud_video": {
                 "name": "Živý náhled"
             }
+        },
+        "alarm_control_panel": {
+            "group": {
+                "name": "Skupina {group_id}"
+            }
         }
     },
     "exceptions": {
@@ -627,6 +662,57 @@
         },
         "command_failed": {
             "message": "Příkaz se nepodařilo dokončit. Hub vrátil: {reason}."
+        },
+        "session_entry_not_found": {
+            "message": "Pro zadané entry_id nebyl nalezen žádný účet Aegis."
+        },
+        "session_entry_required": {
+            "message": "Pokud je nastaveno více účtů Aegis, je entry_id povinné."
+        },
+        "confirm_required": {
+            "message": "{service} vyžaduje ke spuštění `confirm: true`."
+        },
+        "panic_confirm_required": {
+            "message": "press_panic_button vyžaduje `confirm: true`: odešle tísňový poplach na pult centralizované ochrany, který u většiny smluv ihned volá policii."
+        },
+        "session_id_invalid": {
+            "message": "session_id musí být kladné celé číslo."
+        },
+        "no_panel_for_target": {
+            "message": "{service}: pro zadaný cíl nebyl nalezen žádný panel alarmu Aegis."
+        },
+        "photo_mode_option_required": {
+            "message": "set_photo_on_demand_mode vyžaduje alespoň `user` nebo `scenario`."
+        },
+        "sessions_list_failed": {
+            "message": "Nepodařilo se vypsat relace účtu Ajax: {error}"
+        },
+        "session_terminate_failed": {
+            "message": "Relaci účtu Ajax se nepodařilo ukončit: {error}"
+        },
+        "sessions_terminate_failed": {
+            "message": "Ostatní relace účtu Ajax se nepodařilo ukončit: {error}"
+        },
+        "security_hub_detected_malfunctions": {
+            "message": "Nelze zastřežit: otevřené senzory nebo poruchy{details}"
+        },
+        "security_hub_not_connected": {
+            "message": "Nelze zastřežit: hub offline"
+        },
+        "security_hub_busy": {
+            "message": "Hub je zaneprázdněn, zkuste to za několik sekund"
+        },
+        "security_another_transition_is_in_progress": {
+            "message": "Probíhá jiná operace zastřežení/odstřežení"
+        },
+        "security_disarm_rejected": {
+            "message": "Nelze odstřežit: příkaz odmítnut hubem"
+        },
+        "invalid_alarm_code": {
+            "message": "Neplatný kód alarmu"
+        },
+        "not_loaded": {
+            "message": "Není načten žádný účet Aegis for Ajax. Zkontrolujte integraci na stránce Zařízení a služby."
         }
     },
     "device_automation": {
@@ -678,6 +764,11 @@
                 "panic": "Panika",
                 "tamper": "Sabotáž"
             }
+        }
+    },
+    "device": {
+        "keyfobs": {
+            "name": "Klíčenky"
         }
     }
 }

@@ -8,6 +8,11 @@
                     "email": "Adresse e-mail",
                     "password": "Mot de passe",
                     "app_label": "Libellé de l'application (nom de l'app co-branded)"
+                },
+                "data_description": {
+                    "email": "L'e-mail avec lequel vous vous connectez à l'app Ajax.",
+                    "password": "Le mot de passe de votre compte Ajax. Home Assistant n'en garde qu'un hash.",
+                    "app_label": "L'app à laquelle appartient votre compte : Ajax ou une app co-branded. Voir le README en cas de doute."
                 }
             },
             "2fa": {
@@ -15,6 +20,9 @@
                 "description": "Entrez le code à 6 chiffres de votre application d'authentification.",
                 "data": {
                     "totp_code": "Code TOTP"
+                },
+                "data_description": {
+                    "totp_code": "Le code à 6 chiffres de votre app d'authentification."
                 }
             },
             "select_spaces": {
@@ -23,6 +31,9 @@
                 "data": {
                     "account_label": "Libellé du compte",
                     "spaces": "Espaces"
+                },
+                "data_description": {
+                    "spaces": "Les espaces (hubs) à ajouter à Home Assistant. Choisissez-en au moins un."
                 }
             },
             "reconfigure": {
@@ -32,6 +43,11 @@
                     "email": "E-mail",
                     "password": "Mot de passe",
                     "app_label": "Label de l'application"
+                },
+                "data_description": {
+                    "email": "L'e-mail avec lequel vous vous connectez à l'app Ajax.",
+                    "password": "Le mot de passe de votre compte Ajax. Home Assistant n'en garde qu'un hash.",
+                    "app_label": "L'app à laquelle appartient votre compte : Ajax ou une app co-branded. Voir le README en cas de doute."
                 }
             },
             "reconfigure_2fa": {
@@ -39,6 +55,9 @@
                 "description": "Entrez le code à 6 chiffres de votre application d'authentification.",
                 "data": {
                     "totp_code": "Code TOTP"
+                },
+                "data_description": {
+                    "totp_code": "Le code à 6 chiffres de votre app d'authentification."
                 }
             },
             "reauth_confirm": {
@@ -46,6 +65,9 @@
                 "description": "Votre session Ajax pour {email} n'est plus valide. Saisissez le mot de passe actuel du compte pour restaurer l'accès.",
                 "data": {
                     "password": "Mot de passe"
+                },
+                "data_description": {
+                    "password": "Le mot de passe de votre compte Ajax. Home Assistant n'en garde qu'un hash."
                 }
             },
             "reauth_2fa": {
@@ -53,6 +75,9 @@
                 "description": "Saisissez le code à 6 chiffres de votre application d'authentification.",
                 "data": {
                     "totp_code": "Code TOTP"
+                },
+                "data_description": {
+                    "totp_code": "Le code à 6 chiffres de votre app d'authentification."
                 }
             }
         },
@@ -68,7 +93,8 @@
             "account_locked": "Compte verrouillé. Veuillez réessayer plus tard.",
             "reauth_successful": "Ré-authentification réussie.",
             "already_in_progress": "La configuration est déjà en cours. Veuillez terminer ou annuler le flux existant.",
-            "reconfigure_successful": "Identifiants mis à jour avec succès."
+            "reconfigure_successful": "Identifiants mis à jour avec succès.",
+            "cannot_connect": "Impossible de se connecter aux serveurs Ajax."
         }
     },
     "options": {
@@ -328,6 +354,10 @@
         "fcm_never_delivered": {
             "title": "Les notifications push n'arrivent pas",
             "description": "Aegis a vu {events} événements de votre hub pendant que le client push était lancé, et aucun d'eux n'est arrivé par push. L'état de votre alarme n'est pas affecté : il vient de la connexion au hub et de l'interrogation, jamais du push. Mais les événements en temps réel, comme une sonnerie de porte ou une alarme d'intrusion, n'atteignent Home Assistant que par push, ils sont donc perdus.\n\nTrois causes produisent cela et sont indiscernables d'ici : les quatre valeurs FCM peuvent appartenir à un projet Firebase par lequel le fournisseur de push de votre application n'envoie pas, un autre enregistrement peut occuper la destination push de votre compte Ajax, ou la connexion push peut ne s'être jamais établie.\n\nCe qui aide : saisissez à nouveau les quatre valeurs de votre application, dans Paramètres > Réparations ou dans les options de l'intégration. Si le même compte Ajax est utilisé par une autre instance de Home Assistant, essayez un compte distinct pour cette intégration. Cet avis disparaît de lui-même dès qu'un push arrive."
+        },
+        "pin_code_update": {
+            "title": "Saisissez à nouveau le PIN de l'alarme",
+            "description": "Le PIN de l'alarme de ce compte est enregistré dans un ancien format. Ouvrez les options de l'intégration et saisissez à nouveau le PIN pour le mettre à jour. Il continue de fonctionner en attendant."
         }
     },
     "entity": {
@@ -583,6 +613,11 @@
             "cloud_video": {
                 "name": "Vue en direct"
             }
+        },
+        "alarm_control_panel": {
+            "group": {
+                "name": "Groupe {group_id}"
+            }
         }
     },
     "exceptions": {
@@ -627,6 +662,57 @@
         },
         "command_failed": {
             "message": "La commande n'a pas pu être terminée. Le hub a renvoyé : {reason}."
+        },
+        "session_entry_not_found": {
+            "message": "Aucun compte Aegis trouvé pour l'entry_id indiqué."
+        },
+        "session_entry_required": {
+            "message": "entry_id est obligatoire lorsque plusieurs comptes Aegis sont configurés."
+        },
+        "confirm_required": {
+            "message": "{service} nécessite `confirm: true` pour s'exécuter."
+        },
+        "panic_confirm_required": {
+            "message": "press_panic_button nécessite `confirm: true` : il envoie une alarme de panique au centre de télésurveillance, qui dans la plupart des contrats prévient la police immédiatement."
+        },
+        "session_id_invalid": {
+            "message": "session_id doit être un entier positif."
+        },
+        "no_panel_for_target": {
+            "message": "{service} : aucun panneau d'alarme Aegis trouvé pour la cible indiquée."
+        },
+        "photo_mode_option_required": {
+            "message": "set_photo_on_demand_mode nécessite au moins `user` ou `scenario`."
+        },
+        "sessions_list_failed": {
+            "message": "Impossible de lister les sessions du compte Ajax : {error}"
+        },
+        "session_terminate_failed": {
+            "message": "Impossible de fermer la session du compte Ajax : {error}"
+        },
+        "sessions_terminate_failed": {
+            "message": "Impossible de fermer les autres sessions du compte Ajax : {error}"
+        },
+        "security_hub_detected_malfunctions": {
+            "message": "Impossible d'armer : capteurs ouverts ou dysfonctionnements{details}"
+        },
+        "security_hub_not_connected": {
+            "message": "Impossible d'armer : hub hors ligne"
+        },
+        "security_hub_busy": {
+            "message": "Hub occupé, réessayez dans quelques secondes"
+        },
+        "security_another_transition_is_in_progress": {
+            "message": "Une autre opération d'armement/désarmement est en cours"
+        },
+        "security_disarm_rejected": {
+            "message": "Impossible de désarmer : commande rejetée par le hub"
+        },
+        "invalid_alarm_code": {
+            "message": "Code d'alarme invalide"
+        },
+        "not_loaded": {
+            "message": "Aucun compte Aegis for Ajax n'est chargé. Vérifiez l'intégration dans la page Appareils et services."
         }
     },
     "device_automation": {
@@ -678,6 +764,11 @@
                 "panic": "Panique",
                 "tamper": "Sabotage"
             }
+        }
+    },
+    "device": {
+        "keyfobs": {
+            "name": "Télécommandes"
         }
     }
 }

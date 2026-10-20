@@ -8,6 +8,11 @@
                     "email": "E-mail",
                     "password": "Parolă",
                     "app_label": "Etichetă aplicație (numele aplicației co-branded)"
+                },
+                "data_description": {
+                    "email": "Adresa de e-mail cu care te conectezi în aplicația Ajax.",
+                    "password": "Parola contului Ajax. Home Assistant păstrează doar un hash al ei.",
+                    "app_label": "Aplicația căreia îi aparține contul: Ajax sau o aplicație co-branded. Vezi README dacă nu ești sigur."
                 }
             },
             "2fa": {
@@ -15,6 +20,9 @@
                 "description": "Introduceți codul de 6 cifre din aplicația de autentificare.",
                 "data": {
                     "totp_code": "Cod TOTP"
+                },
+                "data_description": {
+                    "totp_code": "Codul de 6 cifre din aplicația de autentificare."
                 }
             },
             "select_spaces": {
@@ -23,6 +31,9 @@
                 "data": {
                     "account_label": "Etichetă cont",
                     "spaces": "Spații"
+                },
+                "data_description": {
+                    "spaces": "Spațiile (hub-urile) de adăugat în Home Assistant. Alege cel puțin unul."
                 }
             },
             "reconfigure": {
@@ -32,6 +43,11 @@
                     "email": "E-mail",
                     "password": "Parolă",
                     "app_label": "Etichetă aplicație"
+                },
+                "data_description": {
+                    "email": "Adresa de e-mail cu care te conectezi în aplicația Ajax.",
+                    "password": "Parola contului Ajax. Home Assistant păstrează doar un hash al ei.",
+                    "app_label": "Aplicația căreia îi aparține contul: Ajax sau o aplicație co-branded. Vezi README dacă nu ești sigur."
                 }
             },
             "reconfigure_2fa": {
@@ -39,6 +55,9 @@
                 "description": "Introduceți codul de 6 cifre din aplicația de autentificare.",
                 "data": {
                     "totp_code": "Cod TOTP"
+                },
+                "data_description": {
+                    "totp_code": "Codul de 6 cifre din aplicația de autentificare."
                 }
             },
             "reauth_confirm": {
@@ -46,6 +65,9 @@
                 "description": "Sesiunea Ajax pentru {email} nu mai este validă. Introduceți parola curentă a contului pentru a restabili accesul.",
                 "data": {
                     "password": "Parolă"
+                },
+                "data_description": {
+                    "password": "Parola contului Ajax. Home Assistant păstrează doar un hash al ei."
                 }
             },
             "reauth_2fa": {
@@ -53,6 +75,9 @@
                 "description": "Introduceți codul din 6 cifre din aplicația de autentificare.",
                 "data": {
                     "totp_code": "Cod TOTP"
+                },
+                "data_description": {
+                    "totp_code": "Codul de 6 cifre din aplicația de autentificare."
                 }
             }
         },
@@ -68,7 +93,8 @@
             "account_locked": "Contul este blocat. Vă rugăm să încercați mai târziu.",
             "reauth_successful": "Reautentificare reușită.",
             "already_in_progress": "Configurarea este deja în curs. Finalizați sau anulați fluxul existent.",
-            "reconfigure_successful": "Datele de autentificare au fost actualizate cu succes."
+            "reconfigure_successful": "Datele de autentificare au fost actualizate cu succes.",
+            "cannot_connect": "Nu se poate conecta la serverele Ajax."
         }
     },
     "options": {
@@ -328,6 +354,10 @@
         "fcm_never_delivered": {
             "title": "Push notifications are not arriving",
             "description": "Aegis has seen {events} events from your hub while the push client was running, and not one of them arrived over push. Your alarm state is not affected — it comes from the hub connection and from polling, never from push — but real-time events such as doorbell rings and intrusion alarms reach Home Assistant only over push, so those are being lost.\n\nThree things produce this and they look identical from here: the four FCM values may belong to a Firebase project your co-branded app's push provider does not send through, another registration may be holding your Ajax account's push destination, or the push connection may never have completed.\n\nWhat helps: re-enter the four values for your co-branded app, under Settings > Repairs or in the integration options. If the same Ajax account is used by another Home Assistant instance, try a separate account for this integration. This notice clears by itself as soon as one push arrives."
+        },
+        "pin_code_update": {
+            "title": "Setează din nou PIN-ul alarmei",
+            "description": "PIN-ul alarmei pentru acest cont este salvat într-un format mai vechi. Deschide opțiunile integrării și introdu din nou PIN-ul pentru a-l actualiza. Între timp funcționează în continuare."
         }
     },
     "entity": {
@@ -583,6 +613,11 @@
             "cloud_video": {
                 "name": "Vizualizare live"
             }
+        },
+        "alarm_control_panel": {
+            "group": {
+                "name": "Grupul {group_id}"
+            }
         }
     },
     "exceptions": {
@@ -627,6 +662,57 @@
         },
         "command_failed": {
             "message": "Comanda nu a putut fi finalizată. Hub-ul a returnat: {reason}."
+        },
+        "session_entry_not_found": {
+            "message": "Nu s-a găsit niciun cont Aegis pentru entry_id-ul indicat."
+        },
+        "session_entry_required": {
+            "message": "entry_id este obligatoriu când sunt configurate mai multe conturi Aegis."
+        },
+        "confirm_required": {
+            "message": "{service} are nevoie de `confirm: true` pentru a rula."
+        },
+        "panic_confirm_required": {
+            "message": "press_panic_button are nevoie de `confirm: true`: trimite o alarmă de panică la dispecerat, care în majoritatea contractelor trimite imediat poliția."
+        },
+        "session_id_invalid": {
+            "message": "session_id trebuie să fie un număr întreg pozitiv."
+        },
+        "no_panel_for_target": {
+            "message": "{service}: nu s-a găsit niciun panou de alarmă Aegis pentru ținta indicată."
+        },
+        "photo_mode_option_required": {
+            "message": "set_photo_on_demand_mode are nevoie de cel puțin `user` sau `scenario`."
+        },
+        "sessions_list_failed": {
+            "message": "Nu s-au putut lista sesiunile contului Ajax: {error}"
+        },
+        "session_terminate_failed": {
+            "message": "Sesiunea contului Ajax nu a putut fi închisă: {error}"
+        },
+        "sessions_terminate_failed": {
+            "message": "Celelalte sesiuni ale contului Ajax nu au putut fi închise: {error}"
+        },
+        "security_hub_detected_malfunctions": {
+            "message": "Nu se poate arma: senzori deschiși sau defecțiuni{details}"
+        },
+        "security_hub_not_connected": {
+            "message": "Nu se poate arma: hub deconectat"
+        },
+        "security_hub_busy": {
+            "message": "Hub ocupat, încercați din nou în câteva secunde"
+        },
+        "security_another_transition_is_in_progress": {
+            "message": "O altă operațiune de armare/dezarmare este în curs"
+        },
+        "security_disarm_rejected": {
+            "message": "Nu se poate dezarma: comandă respinsă de hub"
+        },
+        "invalid_alarm_code": {
+            "message": "Cod de alarmă invalid"
+        },
+        "not_loaded": {
+            "message": "Niciun cont Aegis for Ajax nu este încărcat. Verifică integrarea în pagina Dispozitive și servicii."
         }
     },
     "device_automation": {
@@ -678,6 +764,11 @@
                 "panic": "Panica",
                 "tamper": "Sabotaj"
             }
+        }
+    },
+    "device": {
+        "keyfobs": {
+            "name": "Telecomenzi"
         }
     }
 }

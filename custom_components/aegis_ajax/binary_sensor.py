@@ -33,6 +33,9 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Entities only read coordinator data; nothing to throttle.
+PARALLEL_UPDATES = 0
+
 
 @dataclass(frozen=True)
 class BinarySensorTypeInfo:
@@ -407,7 +410,7 @@ class AjaxKeyfobActiveSensor(CoordinatorEntity[AjaxCobrandedCoordinator], Binary
                 self._attr_suggested_object_id = suggested_object_id
             info = DeviceInfo(
                 identifiers={(DOMAIN, f"{keyfob.hub_id}_keyfobs")},
-                name="Keyfobs",
+                translation_key="keyfobs",
                 manufacturer=MANUFACTURER,
                 model="SpaceControl keyfobs (experimental)",
             )
