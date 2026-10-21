@@ -2,7 +2,7 @@
 name = "aegis-ajax-hass"
 # Mirror of manifest.json's version (the source of truth HA reads). Kept in
 # sync by tests/unit/test_version_consistency.py — bump both when releasing.
-version = "1.27.0-beta.1"
+version = "1.27.2"
 description = "Home Assistant integration for Ajax Security Systems (co-branded) via gRPC"
 requires-python = ">=3.13"
 license = "MIT"
@@ -36,6 +36,13 @@ dev = [
     # older cannot install this integration at all (#513). Mirror any change
     # in hacs.json — tests/unit/test_supported_versions.py enforces it.
     "homeassistant>=2025.11.0",
+    # Home Assistant's test harness (hass fixture, MockConfigEntry, the flow
+    # manager). Each release pins one core exactly, so this also picks the core
+    # the tests run on: the newest stable each interpreter can install (3.13
+    # stops at 2026.2.3). Pinned rather than floored because some releases pin
+    # a core beta; ha-beta.yml covers the newest core. Bump with the core.
+    "pytest-homeassistant-custom-component==0.13.316; python_version < '3.14'",
+    "pytest-homeassistant-custom-component==0.13.373; python_version >= '3.14'",
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
     "pytest-cov>=4.1.0",
@@ -68,6 +75,13 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 exclude = ["custom_components/aegis_ajax/proto/"]
+
+# HA 2026.10 moved entity classes into submodules that older HA doesn't have,
+# re-exporting them from the component package without `as`. Importing from
+# the package keeps the 2025.11 floor working.
+[[tool.mypy.overrides]]
+module = "homeassistant.components.*"
+implicit_reexport = true
 
 [tool.coverage.run]
 omit = [

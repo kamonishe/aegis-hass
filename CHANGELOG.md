@@ -5,7 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.27.0] - unreleased
+## [1.27.2] - 2026-10-21
+
+### Fixed
+- **Missing icons (#631).** Three icons named in the integration don't exist in Home Assistant's icon set, so nothing was drawn: *Arm in night mode* when off, *GSM* when disconnected, and *Drilling*. They now use existing icons. **Requests to Ajax:** none.
+
+## [1.27.1] - 2026-10-20
+
+### Fixed
+- **Reconfiguring onto an account that's already added says so (#610).** Changing an entry's email to one another entry already uses showed *Unknown error* and logged a traceback. It now stops with *already configured*. **Requests to Ajax:** none added.
+
+## [1.27.0] - 2026-10-20
 
 ### Added
 - **New devices show up without a reload (#608).** A device paired in the Ajax app after setup now gets its entities on its own: the integration reloads once when it sees it. Before, only keyfobs were added and everything else waited for a manual reload. **Requests to Ajax:** one normal startup per newly paired device, nothing in steady state.

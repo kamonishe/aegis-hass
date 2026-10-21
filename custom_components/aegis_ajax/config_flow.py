@@ -353,7 +353,6 @@ class AjaxCobrandedConfigFlow(ConfigFlow, domain=DOMAIN):
                 await asyncio.wait_for(self._client.login(), timeout=30)
                 self._capture_session()
                 await self._client.close()
-                return await self._async_finish_reconfigure()
             except TwoFactorRequiredError as e:
                 self._request_id = e.request_id
                 return await self.async_step_reconfigure_2fa()
@@ -364,6 +363,10 @@ class AjaxCobrandedConfigFlow(ConfigFlow, domain=DOMAIN):
             except Exception as err:
                 _LOGGER.exception("Unexpected error during reconfigure")
                 errors["base"] = _unexpected_error_key(err)
+            else:
+                # Outside the try: its already_configured abort must reach the
+                # user, not be caught as an unexpected error.
+                return await self._async_finish_reconfigure()
 
         return self.async_show_form(
             step_id="reconfigure",
@@ -405,7 +408,6 @@ class AjaxCobrandedConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
                 self._capture_session()
                 await self._client.close()
-                return await self._async_finish_reconfigure()
             except AuthenticationError:
                 errors["base"] = "invalid_totp"
             except TimeoutError:
@@ -413,6 +415,8 @@ class AjaxCobrandedConfigFlow(ConfigFlow, domain=DOMAIN):
             except Exception as err:
                 _LOGGER.exception("Unexpected error during reconfigure 2FA")
                 errors["base"] = _unexpected_error_key(err)
+            else:
+                return await self._async_finish_reconfigure()
         return self.async_show_form(
             step_id="reconfigure_2fa", data_schema=TOTP_SCHEMA, errors=errors
         )
