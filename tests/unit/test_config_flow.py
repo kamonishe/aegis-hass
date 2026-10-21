@@ -417,7 +417,11 @@ class TestAsyncStepSelectSpaces:
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "select_spaces"
         spaces_api.list_spaces.assert_awaited_once()
-        validator = next(iter(result["data_schema"].schema.values()))
+        validator = next(
+            value
+            for key, value in result["data_schema"].schema.items()
+            if getattr(key, "schema", key) == "spaces"
+        )
         selector = next(v for v in validator.validators if isinstance(v, SelectSelector))
         assert selector.config["options"] == [{"value": "space-1", "label": "Home"}]
 

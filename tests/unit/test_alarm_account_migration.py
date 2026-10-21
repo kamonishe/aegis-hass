@@ -6,6 +6,8 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
@@ -17,8 +19,18 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-async def test_migration_preserves_entity_id_and_other_account(tmp_path: Path) -> None:
+@pytest.fixture
+async def migration_hass(tmp_path: Path) -> HomeAssistant:
+    """Create a direct Home Assistant instance and cancel registry timers."""
     hass = HomeAssistant(str(tmp_path))
+    yield hass
+    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
+
+
+async def test_migration_preserves_entity_id_and_other_account(
+    migration_hass: HomeAssistant,
+) -> None:
+    hass = migration_hass
     hass.config_entries = MagicMock()
     alice = SimpleNamespace(
         entry_id="alice",
@@ -114,14 +126,16 @@ async def test_migration_preserves_entity_id_and_other_account(tmp_path: Path) -
         )
 
 
-async def test_migrates_visible_entity_ids_under_account_slug(tmp_path: Path) -> None:
+async def test_migrates_visible_entity_ids_under_account_slug(
+    migration_hass: HomeAssistant,
+) -> None:
     """Account labels prefix non-panel IDs while alarm panels keep their names."""
     from custom_components.aegis_ajax import (
         _ensure_account_entity_slug,
         _migrate_account_entity_ids,
     )
 
-    hass = HomeAssistant(str(tmp_path))
+    hass = migration_hass
     hass.config_entries = MagicMock()
     alice = SimpleNamespace(
         entry_id="alice",
@@ -170,11 +184,13 @@ async def test_migrates_visible_entity_ids_under_account_slug(tmp_path: Path) ->
     assert registry.async_get(old_entity_id) is None
 
 
-async def test_migrates_legacy_entity_ids_without_renaming_entities(tmp_path: Path) -> None:
+async def test_migrates_legacy_entity_ids_without_renaming_entities(
+    migration_hass: HomeAssistant,
+) -> None:
     """All non-panel entities gain account scope while keeping entity IDs."""
     from custom_components.aegis_ajax import _migrate_account_scoped_entity_ids
 
-    hass = HomeAssistant(str(tmp_path))
+    hass = migration_hass
     hass.config_entries = MagicMock()
     alice = SimpleNamespace(entry_id="alice", pref_disable_new_entities=False, disabled_by=None)
     bob = SimpleNamespace(entry_id="bob", pref_disable_new_entities=False, disabled_by=None)
