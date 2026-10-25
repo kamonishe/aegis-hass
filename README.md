@@ -206,7 +206,7 @@ You can type any custom label during setup if yours is not listed.
 
 | Type | Devices | Entities |
 |---|---|---|
-| Hub | Hub, Hub Plus, Hub 4G, Hub Lite, Hub 2, Hub 2 Plus, Hub 2 4G, Hub 2 LTE (RTK), Hub 3, Hub Hybrid (2 / 4G), Hub Mega, Hub Void 4G, Hub Fibra, Hub Yavir / Yavir Plus, Hub Fire, Hub Superior | Alarm panel, battery, GSM type/connected, CRA monitoring status, CRA company (diagnostic), lid tamper, IMEI, hub network sensors (Ethernet/Wi-Fi/GSM, IP data, cellular signal/network, mains power); a **Restore after alarm** button (the app's *Restore*; needs the restore permission, presses less than 10 s apart are ignored) |
+| Hub | Hub, Hub Plus, Hub 4G, Hub Lite, Hub 2, Hub 2 Plus, Hub 2 4G, Hub 2 LTE (RTK), Hub 3, Hub Hybrid (2 / 4G), Hub Mega, Hub Void 4G, Hub Fibra, Hub Yavir / Yavir Plus, Hub Fire, Hub Superior | Alarm panel, battery, GSM type/connected, CRA monitoring status, CRA company (diagnostic), lid tamper, IMEI, hub network sensors (Ethernet/Wi-Fi/GSM, IP data, cellular signal/network, mains power); a **Restore required** sensor, on while the hub won't arm until someone restores after an alarm (hubs with *Restoration after alarm* enabled); a **Restore after alarm** button (the app's *Restore*; the account needs the *Restoration after alarm* permission, which only the PRO app can grant, and presses less than 10 s apart are ignored) |
 | Door Sensors | DoorProtect, DoorProtect Plus, DoorProtect Fibra, DoorProtect S, DoorProtect S Plus, DoorProtect Plus Fibra, DoorProtect Plus G3 Fibra, DoorProtect G3 | Door open/close, tamper, vibration (Plus), tilt (Plus, accelerometer), battery, temperature, signal, external contact alert (wired contact triggered), external contact fault (wiring broken) |
 | Motion Sensors | MotionProtect, MotionProtect Plus, MotionProtect Outdoor, MotionProtect Curtain (and outdoor / mini / plus base variants), MotionProtect S / S Plus, MotionProtect G3 family (incl. Fibra), MotionProtect Plus Fibra / G3 | Motion detected (needs push, see [Motion sensors](#motion-sensors-need-push)), tamper, battery, temperature, signal |
 | Cameras | MotionCam, MotionCam Outdoor, MotionCam Fibra (& base), MotionCam G3, MotionCam HD, MotionCam PhOD, MotionCam PhOD Fibra, MotionCam Outdoor PhOD, MotionCam Outdoor 2/4 PhOD, MotionCam S PhOD (& AM), MotionCam Superior PhOD, MotionCam Video (& Indoor) | Motion detected, tamper, battery on all. Camera entity, photo-on-demand capture and alarm albums on **MotionCam PhOD, MotionCam PhOD Fibra, MotionCam Outdoor PhOD, MotionCam Outdoor 2/4 PhOD and MotionCam Fibra base** — the families confirmed on real hardware. MotionCam G3, HD, S PhOD (& AM), Superior PhOD and Video have no camera or capture entity yet: each needs one owner to confirm the Ajax app offers Photo on demand for it, see [#472](https://github.com/bvis/aegis-hass/issues/472). Internal temperature on MotionCam Outdoor PhOD (confirmed on hardware) |
@@ -312,6 +312,37 @@ If you would rather not depend on the camera's own classifier, [Frigate](https:/
 | `aegis_ajax.terminate_other_client_sessions` | Log every other device out of the Ajax account, keeping this integration's session. Same confirmation flag; reports how many sessions it terminated if the endpoint stops it part way. |
 
 Both `force_arm` services accept an optional `entity_id` target (alarm control panel entity). If no target is specified, all panels across all configured accounts are armed.
+
+A transition toward explicit targets and force-arm PIN checks is underway (#568).
+For now, existing calls still run. Aegis creates a persistent **Repair** when
+`force_arm`, `force_arm_night`, `disarm_night_mode`, `press_panic_button`, or
+`set_photo_on_demand_mode` is called without an `entity_id`. Select the intended
+alarm panel explicitly in every automation or script; list each intended panel
+if you previously relied on the all-spaces default.
+
+If **Use PIN code** is enabled in an account's Aegis options, `force_arm` and
+`force_arm_night` also raise a Repair when the supplied `code` is missing or
+invalid. These two services still execute during this transition, even with a
+wrong code. A future release will require a valid PIN. This is the PIN configured
+in Aegis, not your Ajax login password. Supply it as a quoted string to preserve
+leading zeroes:
+
+```yaml
+action: aegis_ajax.force_arm
+target:
+  entity_id: alarm_control_panel.home
+data:
+  code: "0123"  # Replace with your configured Aegis PIN.
+```
+
+Warnings describe calls observed at runtime; they do not scan dormant automations.
+The integration saves neither the supplied code nor its hash in the Repair.
+After updating every affected automation or script, dismiss the notice in
+**Settings → System → Repairs**. A later valid call does not clear it automatically,
+because other automations may still need updating. If an outdated call runs again
+after you ignore its warning, the Repair reappears. Read-only services such as
+`refresh_alarm_images` retain their existing all-spaces behavior.
+
 
 ### Arm modes & voice assistants (Alexa via Home Assistant Cloud)
 
